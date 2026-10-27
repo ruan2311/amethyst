@@ -38,6 +38,7 @@ function copyDir(src, dst) {
   copyDir(path.join(root, 'src'), path.join(app, 'src'));
   const { devDependencies, scripts, ...runtimePkg } = pkg;
   fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify(runtimePkg, null, 2));
+  fs.copyFileSync(path.join(__dirname, 'LEIA-ME.txt'), path.join(tmp, 'LEIA-ME.txt'));
 
   // Ícone e informações do .exe (o que aparece em Propriedades → Detalhes).
   const exePath = path.join(tmp, 'Amethyst.exe');

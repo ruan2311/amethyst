@@ -1,0 +1,41 @@
+﻿AMETHYST 1.0.0 - karaokê
+=====================================
+
+COMO ABRIR
+  Dê dois cliques em Amethyst.exe (dica: clique com o botão direito > Fixar na barra de tarefas).
+  Se o Windows mostrar "O Windows protegeu o computador", clique em "Mais informações" > "Executar assim mesmo"
+  (aparece porque o programa ainda não tem assinatura digital).
+
+PRIMEIRO USO
+  1. Clique em "Escolher pasta de vídeos" e aponte a pasta dos seus karaokês.
+  2. Nomeie os arquivos como:  Artista - Música.mp4
+     Subpastas com nome de gênero (Sertanejo, MPB, Rock...) viram o gênero.
+     Arquivos sem "Artista - Música" usam o nome da pasta como artista.
+  3. Em Configurações > "Buscar gêneros agora" o programa descobre o gênero dos artistas pela internet.
+
+CANTANDO
+  - Digite quem vai cantar (lado direito), use o + para pôr na fila, ou "Cantar" para ir direto.
+  - No Palco: Espaço = pausa, F = tela cheia, setas = voltar/avançar 5 s, duplo clique = tela cheia.
+  - Pontuação "Microfone" (semi-real): mede afinação, presença e estabilidade da voz.
+    "Sorteio": nota aleatória, para quando não houver microfone.
+  - Aba YouTube: procure a música, dê play e clique em "Pontuar esta música".
+
+TELA DA TV (MODO KARAOKÊ)
+  1. Ligue a TV no notebook pelo HDMI e aperte Win + P > "Estender".
+  2. No Amethyst clique em "Tela da TV" (canto inferior do menu).
+     A TV abre em tela cheia com: apresentação de quem vai cantar, o vídeo, a nota ao vivo,
+     a nota final e, nos intervalos, a fila de próximos e as notas da noite.
+  3. O notebook fica com os controles (o vídeo aparece aqui como prévia sem som).
+     O som sai pela TV.
+  - Se o programa abrir na tela errada: Configurações > "Qual tela é a TV?".
+  - Dois cliques na TV (ou F) liga/desliga a tela cheia dela.
+  - YouTube na TV: abra o vídeo na aba YouTube e clique em "Mandar para a TV".
+
+ONDE FICAM OS DADOS
+  %APPDATA%\Amethyst  (biblioteca, miniaturas, notas e o arquivo amethyst.log)
+  Se algo der errado, mande o amethyst.log dessa pasta.
+
+LIMITAÇÕES CONHECIDAS
+  - Toca bem MP4, WebM e MKV com H.264. AVI, WMV e alguns MKV antigos aparecem com "formato?" e não abrem ainda.
+  - Vídeos com áudio AC3/DTS podem tocar sem som.
+  - A pontuação ouve o microfone: caixas de som perto do microfone atrapalham (baixe a sensibilidade).

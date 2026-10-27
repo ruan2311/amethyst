@@ -187,7 +187,7 @@
         <span class="num">${i + 1}</span>
         ${coverHTML(s)}
         <div class="rt"><b>${esc(s.title)}</b><span>${esc(s.artist)}</span></div>
-        ${s.unsupported ? '<span class="chip warn" title="Este formato não abriu no protótipo">formato?</span>' : ''}
+        ${s.unsupported ? '<span class="chip warn" title="Este formato ainda não é suportado">formato?</span>' : ''}
         <span class="chip">${esc(genreOf(s))}</span>
         <span class="dur">${s.duration ? fmt(s.duration) : ''}</span>
         <button class="ibtn sm ${s.fav ? 'on' : ''}" data-action="fav" aria-label="Favorita">${ICON.heart.replace('FILL', s.fav ? 'currentColor' : 'none')}</button>
@@ -526,7 +526,7 @@
 
   // ---------- configurações ----------
   async function renderSettings() {
-    api.version().then((v) => { $('verText').textContent = 'Amethyst ' + v + ' · protótipo'; });
+    api.version().then((v) => { $('verText').textContent = 'Amethyst ' + v; });
     $('folderList').innerHTML = S.lib.folders.map((f) => `<div class="frow"><span title="${esc(f)}">${esc(f)}</span>
       <button class="ibtn sm" data-action="removeFolder" data-folder="${esc(f)}" aria-label="Remover pasta">${ICON.x}</button></div>`).join('') ||
       '<p class="note">Nenhuma pasta ainda.</p>';

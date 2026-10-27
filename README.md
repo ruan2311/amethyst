@@ -2,7 +2,7 @@
 
 Karaokê para Windows: organiza seus vídeos de karaokê em uma biblioteca, dá nota pelo microfone e mostra tudo na TV enquanto você controla pelo notebook.
 
-> 🧪 **Protótipo (0.1.0 beta).** Pode apresentar falhas. Se algo der errado, abra uma *issue* e anexe o arquivo `%APPDATA%\Amethyst\amethyst.log`.
+> 🧪 Pode apresentar falhas. Se algo der errado, abra uma *issue* e anexe o arquivo `%APPDATA%\Amethyst\amethyst.log`.
 
 ## Baixar e usar
 

@@ -167,7 +167,7 @@ async function open(userData) {
           const url = 'https://musicbrainz.org/ws/2/artist/?fmt=json&limit=1&query=' + encodeURIComponent('artist:"' + name.replace(/"/g, '') + '"');
           let res;
           for (let attempt = 0; attempt < 4; attempt++) {
-            res = await fetch(url, { headers: { 'User-Agent': 'Amethyst-Karaoke/0.1.0 (desktop prototype)', Accept: 'application/json' } });
+            res = await fetch(url, { headers: { 'User-Agent': 'Amethyst-Karaoke/1.0.0 (+https://github.com/ruan2311/amethyst)', Accept: 'application/json' } });
             if (res.status !== 503) break;
             await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
           }
