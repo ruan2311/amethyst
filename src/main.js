@@ -5,6 +5,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const { Readable } = require('stream');
 const library = require('./library');
+require('./renderer/lyrics'); // AmethystLyrics.parse para arquivos .lrc
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'media', privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true, bypassCSP: true, corsEnabled: true } }
@@ -239,6 +240,58 @@ app.whenReady().then(async () => {
     store.saveSoon();
     return song;
   });
+  // Melodia analisada de cada música (barrinhas de tom), guardada em userData/analysis.
+  const analysisDir = path.join(app.getPath('userData'), 'analysis');
+  fs.mkdirSync(analysisDir, { recursive: true });
+  ipcMain.handle('lib:getAnalysis', async (_, id) => {
+    const song = store.data.songs.find((s) => s.id === id);
+    if (!song || !/^[a-f0-9]{40}$/.test(id)) return null;
+    try {
+      const a = JSON.parse(await fsp.readFile(path.join(analysisDir, id + '.json'), 'utf8'));
+      return a.mtime === song.mtime ? a : null; // vídeo trocado: analisa de novo
+    } catch { return null; }
+  });
+  ipcMain.handle('lib:saveAnalysis', async (_, id, data) => {
+    const song = store.data.songs.find((s) => s.id === id);
+    if (!song || !/^[a-f0-9]{40}$/.test(id)) return;
+    await fsp.writeFile(path.join(analysisDir, id + '.json'), JSON.stringify(Object.assign({}, data, { mtime: song.mtime })));
+  });
+  // ---------- letras ----------
+  // Ordem: letra editada/baixada no app (userData/lyrics) → arquivo .lrc com o mesmo nome do vídeo.
+  const lyricsDir = path.join(app.getPath('userData'), 'lyrics');
+  fs.mkdirSync(lyricsDir, { recursive: true });
+  const songOf = (id) => (/^[a-f0-9]{40}$/.test(id) ? store.data.songs.find((s) => s.id === id) : null);
+  ipcMain.handle('lyrics:get', async (_, id) => {
+    const song = songOf(id);
+    if (!song) return null;
+    try { return JSON.parse(await fsp.readFile(path.join(lyricsDir, id + '.json'), 'utf8')); } catch { /* sem letra salva */ }
+    const lrc = song.path.replace(/\.[^.\\/]+$/, '') + '.lrc';
+    try { return Object.assign(globalThis.AmethystLyrics.parse(await fsp.readFile(lrc, 'utf8')), { offset: 0, source: 'arquivo .lrc' }); } catch { return null; }
+  });
+  ipcMain.handle('lyrics:save', async (_, id, data) => {
+    if (!songOf(id)) return;
+    const file = path.join(lyricsDir, id + '.json');
+    if (!data) { await fsp.rm(file, { force: true }); return; }
+    await fsp.writeFile(file, JSON.stringify({ synced: data.synced || null, plain: data.plain || [], offset: +data.offset || 0, source: data.source || 'manual' }));
+  });
+  // LRCLIB (lrclib.net): base aberta de letras, muitas com o tempo de cada linha.
+  ipcMain.handle('lyrics:fetch', async (_, id) => {
+    const song = songOf(id);
+    if (!song) return null;
+    const q = new URLSearchParams({ track_name: song.title });
+    if (song.artist && song.artist !== 'Artista desconhecido') q.set('artist_name', song.artist);
+    try {
+      const res = await fetch('https://lrclib.net/api/search?' + q, { headers: { 'User-Agent': 'Amethyst/' + app.getVersion() + ' (https://github.com/ruan2311/amethyst)' } });
+      if (!res.ok) return null;
+      const list = (await res.json()).filter((x) => !x.instrumental && (x.syncedLyrics || x.plainLyrics));
+      if (!list.length) return null;
+      // Prefere letra sincronizada e com duração parecida com a do vídeo.
+      const score = (x) => (x.syncedLyrics ? 0 : 1000) + (song.duration && x.duration ? Math.abs(x.duration - song.duration) : 50);
+      list.sort((a, b) => score(a) - score(b));
+      const best = list[0];
+      return Object.assign(globalThis.AmethystLyrics.parse(best.syncedLyrics || best.plainLyrics), { offset: 0, source: 'LRCLIB' });
+    } catch { return null; }
+  });
   ipcMain.handle('app:showFile', (_, id) => {
     const song = store.data.songs.find((s) => s.id === id);
     if (song) shell.showItemInFolder(song.path);
@@ -277,6 +330,32 @@ async function runSelftest() {
     window.__frame=()=>new Promise((r)=>requestAnimationFrame(()=>requestAnimationFrame(r))); 0;`);
   await wait(6000);
   await shot('1-biblioteca'); await mark('1-biblioteca');
+  if (process.argv.includes('--melody')) {
+    // Checa o caminho real da análise: WAV gerado em memória → decodeAudioData → Web Worker.
+    const r = await js(`(async () => {
+      const sr = 22050, secs = 12, n = sr * secs, mel = [67, 69, 71, 74, 71, 69, 67, 64, 62, 67, 69, 71];
+      const pcm = new Int16Array(n); let ph = 0;
+      for (let i = 0; i < n; i++) { const m = mel[Math.floor(i / sr)]; const f = 440 * 2 ** ((m - 69) / 12); ph += 2 * Math.PI * f / sr;
+        let v = 0; for (let h = 1; h <= 5; h++) v += Math.sin(h * ph) / h; pcm[i] = v * 6000 * ((i % sr) < sr * 0.9 ? 1 : 0); }
+      const buf = new ArrayBuffer(44 + n * 2), d = new DataView(buf), w = (o, s) => [...s].forEach((c, k) => d.setUint8(o + k, c.charCodeAt(0)));
+      w(0, 'RIFF'); d.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); d.setUint32(16, 16, true); d.setUint16(20, 1, true); d.setUint16(22, 1, true);
+      d.setUint32(24, sr, true); d.setUint32(28, sr * 2, true); d.setUint16(32, 2, true); d.setUint16(34, 16, true); w(36, 'data'); d.setUint32(40, n * 2, true);
+      new Int16Array(buf, 44).set(pcm);
+      const t0 = performance.now();
+      const audio = await new OfflineAudioContext(1, 1, 11025).decodeAudioData(buf);
+      const worker = new Worker('melody-worker.js');
+      const res = await new Promise((ok, bad) => { worker.onmessage = (e) => e.data.result && ok(e.data.result); worker.onerror = (e) => bad(new Error('worker: ' + e.message)); worker.postMessage({ id: 1, samples: audio.getChannelData(0).slice(), sr: audio.sampleRate }); });
+      const hits = mel.filter((m, k) => res.notes.some((x) => x.s <= k + 0.45 && x.e > k + 0.45 && x.m % 12 === m % 12)).length;
+      return { sr: audio.sampleRate, ms: Math.round(performance.now() - t0), notas: res.notes.length, acertos: hits + '/' + mel.length, tom: res.key.name };
+    })()`);
+    log('[selftest] melodia', JSON.stringify(r));
+    return app.quit();
+  }
+  if (process.argv.includes('--quick')) {
+    await js(`document.getElementById('tvBtn').click()`); await wait(3500);
+    if (tv) fs.writeFileSync(path.join(selftestDir, '2-tv.png'), (await tv.webContents.capturePage()).toPNG());
+    return app.quit();
+  }
   const perf = await js(`(async()=>{const out={};let t=performance.now();
     document.querySelector('[data-tab=songs]').click(); await __frame(); out.todasAsMusicas=Math.round(performance.now()-t);
     t=performance.now(); document.querySelector('[data-tab=artists]').click(); await __frame(); out.artistas=Math.round(performance.now()-t);

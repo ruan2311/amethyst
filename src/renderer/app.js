@@ -8,6 +8,8 @@
   const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); const m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; };
   const rnd = (a, b) => Math.round(a + Math.random() * (b - a));
   const NO_GENRE = 'Sem gênero';
+  // Nota com vírgula quando é quebrada: 87.5 → "87,5".
+  const fmtScore = (v) => (Number.isInteger(v) ? String(v) : (Math.round(v * 10) / 10).toFixed(1).replace('.', ','));
 
   const ICON = {
     play: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>',
@@ -187,6 +189,7 @@
         <span class="num">${i + 1}</span>
         ${coverHTML(s)}
         <div class="rt"><b>${esc(s.title)}</b><span>${esc(s.artist)}</span></div>
+        ${kindOf(s) === 'clip' ? '<span class="chip">Clipe</span>' : ''}
         ${s.unsupported ? '<span class="chip warn" title="Este formato ainda não é suportado">formato?</span>' : ''}
         <span class="chip">${esc(genreOf(s))}</span>
         <span class="dur">${s.duration ? fmt(s.duration) : ''}</span>
@@ -220,12 +223,13 @@
       '<div class="empty">Fila vazia. Digite quem vai cantar e use o + numa música.</div>';
     tvQueue();
     const h = S.lib.history.slice(0, 12);
-    $('histList').innerHTML = h.map((x) => `<div class="hist"><span>${esc(x.singer)} · ${esc(x.title)}</span><b>${x.total}%</b></div>`).join('') ||
+    $('histList').innerHTML = h.map((x) => `<div class="hist"><span>${esc(x.singer)} · ${esc(x.title)}</span><b>${fmtScore(x.total)}%</b></div>`).join('') ||
       '<p class="note">As notas aparecem aqui.</p>';
     if (S.view === 'library') renderHero();
   }
   function enqueue(song, singer) {
     S.queue.push({ song, singer: singer || singerName() });
+    if (S.lib.settings.scoreMode === 'manual') melody.get(song); // já deixa a melodia pronta
     renderQueue();
     toast(`${song.title} entrou na fila (${S.queue[S.queue.length - 1].singer})`);
   }
@@ -258,6 +262,215 @@
     document.querySelectorAll('.seg [data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
     $('micPanel').hidden = mode !== 'mic';
     $('fakePanel').hidden = mode !== 'fake';
+    $('manualPanel').hidden = mode !== 'manual';
+  }
+
+  // ---------- modo sem detecção ----------
+  // Enquanto não há como ouvir os microfones: a nota ao vivo é simulada e,
+  // perto do fim, o app pergunta ao operador qual nota dar.
+  const sim = {
+    reset() { this.total = 0; this.goal = rnd(72, 90); this.chosen = null; this.asked = false; this.phase = Math.random() * 10; },
+    step() {
+      const goal = this.chosen == null ? this.goal : this.chosen;
+      this.total = Math.max(0, Math.min(100, this.total + (goal - this.total) * 0.03 + (Math.random() - 0.5) * 1.4));
+      this.phase += 0.35;
+    },
+    midi() { return Math.sin(this.phase * 0.4) > 0.85 ? null : 57 + 6 * Math.sin(this.phase) + 3 * Math.sin(this.phase * 2.3); }
+  };
+  sim.reset();
+  // Barra discreta no rodapé: não bloqueia nada, dá para continuar mexendo no app.
+  function askScore() {
+    if (!S.current) return;
+    sim.asked = true;
+    $('sbTitle').textContent = `Nota para ${S.current.singer}`;
+    $('sbSong').textContent = S.current.song.title;
+    $('sbInput').value = '';
+    $('scoreBar').hidden = false;
+  }
+  const kbars = new window.KaraokeBars($('kbCanvas'), { window: 4 });
+  kbars.run(() => !document.hidden && S.view === 'player' && S.mode === 'manual' && !!S.current);
+  function hideScoreBar() { $('scoreBar').hidden = true; }
+  function pickScore(v) {
+    sim.chosen = v;
+    hideScoreBar();
+    toast(`Nota ${fmtScore(v)}% guardada para o fim da música`);
+  }
+  // Campo livre: aceita nota quebrada com vírgula ou ponto (87,5 ou 87.5) e envia no Enter.
+  $('sbInput').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const v = parseFloat(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(v)) { toast('Digite um número de 0 a 100'); return; }
+    pickScore(Math.round(Math.max(0, Math.min(100, v)) * 10) / 10);
+  });
+
+  // ---------- melodia do vídeo (barrinhas no tom certo) ----------
+  // Lê o áudio do vídeo, acha a melodia numa thread separada e guarda o resultado,
+  // então cada música é analisada uma vez só.
+  const melody = {
+    mem: new Map(), jobs: [], running: false, worker: null, waiting: new Map(), seq: 0,
+    // urgent: a música que vai tocar agora passa na frente das que estão na fila.
+    get(song, urgent) {
+      if (this.mem.has(song.id)) return Promise.resolve(this.mem.get(song.id));
+      return new Promise((resolve) => {
+        const at = this.running ? 1 : 0;
+        let i = this.jobs.findIndex((j) => j.song.id === song.id);
+        if (i < 0) { this.jobs.push({ song, done: [] }); i = this.jobs.length - 1; }
+        this.jobs[i].done.push(resolve);
+        if (urgent && i > at) this.jobs.splice(at, 0, this.jobs.splice(i, 1)[0]);
+        this.pump();
+      });
+    },
+    async pump() {
+      if (this.running || !this.jobs.length) return;
+      this.running = true;
+      const job = this.jobs[0];
+      let res = null;
+      try { res = await api.getAnalysis(job.song.id); if (!res) res = await this.analyze(job.song); } catch { res = null; }
+      this.mem.set(job.song.id, res);
+      this.jobs.shift();
+      job.done.forEach((f) => f(res));
+      this.running = false;
+      setTimeout(() => this.pump(), 300);
+    },
+    async analyze(song) {
+      if (song.unsupported || song.size > 700 * 1024 * 1024) return null;
+      const buf = await (await fetch(`media://video/${song.id}`)).arrayBuffer();
+      const ctx = new OfflineAudioContext(1, 1, 11025);
+      const audio = await ctx.decodeAudioData(buf); // já vem em 11 kHz (suficiente para melodia)
+      const n = audio.length, chans = audio.numberOfChannels, mono = new Float32Array(n);
+      for (let c = 0; c < chans; c++) { const d = audio.getChannelData(c); for (let i = 0; i < n; i++) mono[i] += d[i] / chans; }
+      const result = await this.run(mono, audio.sampleRate);
+      if (result) api.saveAnalysis(song.id, result);
+      return result;
+    },
+    run(samples, sr) {
+      if (!this.worker) {
+        try {
+          this.worker = new Worker('melody-worker.js');
+          this.worker.onmessage = (e) => { const w = this.waiting.get(e.data.id); if (w && (e.data.result || e.data.error)) { this.waiting.delete(e.data.id); w(e.data.result || null); } };
+          this.worker.onerror = () => { this.worker = 'off'; this.waiting.forEach((w) => w(null)); this.waiting.clear(); };
+        } catch { this.worker = 'off'; }
+      }
+      // Plano B: sem thread separada, analisa aqui mesmo (leva ~1 s por música).
+      if (this.worker === 'off') return Promise.resolve(window.AmethystMelody ? window.AmethystMelody.analyze(samples, sr) : null);
+      const id = ++this.seq;
+      return new Promise((resolve) => { this.waiting.set(id, resolve); this.worker.postMessage({ id, samples, sr }, [samples.buffer]); });
+    }
+  };
+  // Relógio do vídeo para as barras: o vídeo daqui ou, sem prévia, o tempo da TV estimado.
+  const songClock = () => (video.getAttribute('src') ? video.currentTime : S.tvT + (S.tvPaused ? 0 : (performance.now() - (S.tvTAt || 0)) / 1000));
+  function applyMelody(song) {
+    S.melody = null;
+    if (S.mode !== 'manual') return;
+    $('kbInfo').textContent = 'Analisando a música…';
+    melody.get(song, true).then((res) => {
+      if (!S.current || S.current.song !== song) return;
+      if (res && res.notes.length >= 8) {
+        S.melody = res;
+        kbars.setTrack(res, songClock);
+        if (S.tv) api.tvCmd({ type: 'melody', id: song.id, res });
+        $('kbInfo').textContent = `Tom: ${res.key.name}${res.bpm ? ' · ' + res.bpm + ' BPM' : ''}`;
+      } else $('kbInfo').textContent = 'Melodia não encontrada: barras simuladas';
+    });
+  }
+
+  // ---------- letras (videoclipes) ----------
+  const L = window.AmethystLyrics;
+  const kindOf = (s) => s.kind || s.kindAuto || 'karaoke';
+  const fmtOff = (o) => ((o || 0) > 0 ? '+' : '') + (o || 0).toFixed(2).replace('.', ',') + 's';
+  async function loadLyrics(song) {
+    let lyr = await api.getLyrics(song.id);
+    if (!lyr && S.lib.settings.autoLyrics !== false) { lyr = await api.fetchLyrics(song.id); if (lyr) api.saveLyrics(song.id, lyr); }
+    return lyr;
+  }
+  function applyLyrics(song) {
+    setLyrics(null, true);
+    $('lyrBox').hidden = kindOf(song) !== 'clip';
+    if ($('lyrBox').hidden) return;
+    $('lyrNow').textContent = 'Procurando a letra…';
+    loadLyrics(song).then((lyr) => { if (S.current && S.current.song === song) setLyrics(lyr); });
+  }
+  function setLyrics(lyr, quiet) {
+    const has = lyr && ((lyr.synced && lyr.synced.length) || (lyr.plain && lyr.plain.length));
+    S.lyrics = has ? lyr : null; S.lyrIdx = -2;
+    const l = S.lyrics;
+    $('lyrAdj').hidden = !(l && l.synced);
+    $('lyrOff').textContent = fmtOff(l && l.offset);
+    $('lyrSrc').textContent = !l ? 'Sem letra: use “Editar letra” para buscar ou colar.' : (l.synced ? 'Letra sincronizada' : 'Letra sem tempo: use “Sincronizar”') + (l.source ? ' · ' + l.source : '');
+    $('lyrPrev').textContent = ''; $('lyrNext').textContent = '';
+    $('lyrNow').textContent = !l ? (quiet ? '' : 'Sem letra para esta música') : l.synced ? '♪' : (l.plain.find(Boolean) || '');
+    if (S.tv && S.current && !S.current.youtube) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: S.lyrics });
+  }
+  function tickLyrics() {
+    if (!S.lyrics || !S.lyrics.synced || $('lyrBox').hidden || document.hidden || S.view !== 'player') return;
+    const i = L.lineAt(S.lyrics, songClock());
+    if (i === S.lyrIdx) return;
+    S.lyrIdx = i;
+    const s = S.lyrics.synced;
+    $('lyrPrev').textContent = i > 0 ? s[i - 1].text : '';
+    $('lyrNow').textContent = i >= 0 ? (s[i].text || '♪') : '♪';
+    $('lyrNext').textContent = s[i + 1] ? s[i + 1].text : '';
+  }
+  let lyrSaveTimer;
+  function setOffset(o) {
+    if (!S.lyrics || !S.current) return;
+    S.lyrics.offset = Math.round(o * 100) / 100; S.lyrIdx = -2;
+    $('lyrOff').textContent = fmtOff(S.lyrics.offset);
+    if (S.tv) api.tvCmd({ type: 'lyricsOffset', offset: S.lyrics.offset });
+    const id = S.current.song.id, lyr = S.lyrics;
+    clearTimeout(lyrSaveTimer); lyrSaveTimer = setTimeout(() => api.saveLyrics(id, lyr), 800);
+  }
+
+  // Sincronizar: com a música tocando, aperta Espaço quando cada linha começa.
+  function startSync() {
+    if (!S.lyrics) { toast('Cole a letra primeiro em “Editar letra”'); return; }
+    hideScoreBar();
+    S.sync = { lines: S.lyrics.plain.filter((x) => x.trim()), times: [] };
+    $('syncBar').hidden = false; renderSync();
+    if (P.paused) toast('Dê play e aperte Espaço quando cada linha começar a ser cantada', 5000);
+  }
+  function renderSync() {
+    const k = S.sync.times.length, n = S.sync.lines.length;
+    $('syncCount').textContent = `${k} de ${n} linhas`;
+    $('syncLine').textContent = k < n ? S.sync.lines[k] : 'Fim da letra: clique em Concluir';
+  }
+  function finishSync() {
+    const { lines, times } = S.sync;
+    if (!times.length) { $('syncBar').hidden = true; S.sync = null; return; }
+    let last = times[times.length - 1];
+    const synced = lines.map((text, k) => ({ t: k < times.length ? times[k] : (last += 3), text }));
+    const lyr = { synced, plain: lines, offset: 0, source: 'sincronizada no Amethyst' };
+    api.saveLyrics(S.current.song.id, lyr);
+    $('syncBar').hidden = true; S.sync = null;
+    setLyrics(lyr);
+    toast('Letra sincronizada e salva');
+  }
+
+  async function openLyrics(song) {
+    if (!song) return;
+    const cur = S.current && S.current.song === song;
+    let lyr = cur && S.lyrics ? S.lyrics : await api.getLyrics(song.id);
+    const m = $('modal');
+    m.innerHTML = `<form class="mcard wide lyr-edit" id="lyrForm"><h2>Letra · ${esc(song.title)}</h2>
+      <p class="note" id="lyrStatus">${lyr ? (lyr.synced ? 'Sincronizada' : 'Sem tempo') + (lyr.source ? ' · ' + esc(lyr.source) : '') : 'Sem letra ainda.'}</p>
+      <textarea name="t" spellcheck="false" placeholder="Cole a letra aqui, uma linha por verso.&#10;Letras com tempo no formato [01:23.45] ficam sincronizadas.">${esc(L.toText(lyr))}</textarea>
+      <div class="row-btns"><button class="btn pri" type="submit">Salvar</button>
+      <button class="btn gho" type="button" data-action="lyrFetch" data-id="${song.id}">Buscar na internet</button>
+      <button class="btn gho" type="button" data-action="lyrClear" data-id="${song.id}">Apagar letra</button>
+      <button class="btn gho" type="button" data-action="closeModal">Cancelar</button></div></form>`;
+    m.hidden = false;
+    const form = $('lyrForm'), orig = form.t.value;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = form.t.value;
+      const p = L.parse(text);
+      const data = text.trim() ? Object.assign(p, { offset: lyr && p.synced ? lyr.offset || 0 : 0, source: text === orig && lyr ? lyr.source : (form.dataset.source || 'editada') }) : null;
+      await api.saveLyrics(song.id, data);
+      m.hidden = true;
+      if (S.current && S.current.song === song) { if (kindOf(song) === 'clip') $('lyrBox').hidden = false; setLyrics(data); }
+      toast(data ? 'Letra salva' : 'Letra apagada');
+    });
+    form._song = song;
   }
 
   async function startSong(song, singer) {
@@ -272,8 +485,12 @@
     if (mode === 'mic' && !(await ensureMic())) { mode = 'fake'; toast('Microfone não encontrado: usando o modo sorteio'); }
     setMode(mode);
     S.ytOnTv = false;
+    sim.reset(); hideScoreBar(); kbars.reset(); $('kbInfo').textContent = '';
     scorer.begin();
     await P.load(song, 0, true);
+    applyMelody(song);
+    applyLyrics(song);
+    $('syncBar').hidden = true; S.sync = null;
     if (S.tv || video.paused) scorer.pause();
     api.played(song.id);
   }
@@ -386,6 +603,8 @@
         video.muted = true;
         api.tvCmd({ type: 'load', song: { id: S.current.song.id, title: S.current.song.title, artist: S.current.song.artist },
           singer: S.current.singer, mode: S.mode, startAt: video.currentTime, intro: false, paused: wasPaused, volume: video.volume });
+        if (S.melody) api.tvCmd({ type: 'melody', id: S.current.song.id, res: S.melody });
+        if (S.lyrics) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: S.lyrics });
       }
       toast(S.tvExternal ? 'TV ligada' : 'Janela da TV aberta (arraste para a TV e dê dois cliques para tela cheia)', 5000);
       return;
@@ -397,7 +616,7 @@
       case 'ended': return finish();
       case 'error': return onError();
       case 'state':
-        S.tvT = e.t; S.tvD = e.d; S.tvPaused = e.paused;
+        S.tvT = e.t; S.tvD = e.d; S.tvPaused = e.paused; S.tvTAt = performance.now();
         if (video.getAttribute('src') && !document.hidden) {
           if (Math.abs(video.currentTime - e.t) > 0.6) video.currentTime = e.t;
           if (e.paused && !video.paused) video.pause();
@@ -413,7 +632,21 @@
   const setWidth = (id, v) => { const k = id + ':w'; if (shown.get(k) !== v) { shown.set(k, v); $(id).style.width = v + '%'; } };
   let tvTick = 0;
   setInterval(() => {
+    tickLyrics();
     scorer.monitor = !document.hidden && (S.view === 'settings' || (S.view === 'player' && S.mode === 'mic'));
+    if (S.mode === 'manual' && S.current && S.view !== 'score') {
+      const playing = S.current.youtube ? S.ytScoring : !P.paused;
+      if (playing) sim.step();
+      kbars.playing = playing;
+      kbars.skill = Math.max(0.3, sim.total / 100);
+      const total = Math.round(sim.total);
+      if (S.view === 'player') { setText('manTotal', total); if (document.fullscreenElement) setText('hudScore', total + '%'); }
+      if (S.view === 'youtube' && S.ytScoring) setText('ytLive', total + '%');
+      if (S.tv && (!S.current.youtube || S.ytOnTv) && (tvTick++ & 1) === 0) api.tvCmd({ type: 'live', total, midi: playing ? sim.midi() : null });
+      // Faltando 1 minuto (ou na metade, se a música for curta), pergunta a nota. Uma vez por música.
+      if (!S.current.youtube && !sim.asked && P.duration > 20 && P.duration - P.time < Math.min(60, P.duration / 2)) askScore();
+      return;
+    }
     if (!scorer.ready) return;
     const m = scorer.metrics();
     if (!document.hidden && S.view === 'player' && S.mode === 'mic') {
@@ -439,7 +672,12 @@
     if (!S.current) return;
     const cur = S.current;
     let r;
-    if (S.mode === 'fake') r = { total: rnd(62, 100), fake: true };
+    // Esqueceram de dar a nota: sai uma nota boa, acima de 80.
+    if (S.mode === 'manual' && sim.chosen == null) sim.chosen = rnd(81, 100);
+    hideScoreBar();
+    const near = (v, a, b) => Math.max(0, Math.min(100, Math.round(v) + rnd(a, b)));
+    if (S.mode === 'manual') r = { total: sim.chosen, tune: near(sim.chosen, -6, 6), presence: near(sim.chosen, -3, 8), stab: near(sim.chosen, -8, 5), fake: false, manual: true };
+    else if (S.mode === 'fake') r = { total: rnd(62, 100), fake: true };
     else { const m = scorer.metrics(); r = { total: m.total, tune: m.tune, presence: m.presence, stab: m.stab, fake: false }; }
     if (!cur.youtube) { P.pause(); video.pause(); if (document.fullscreenElement) document.exitFullscreen(); }
     scorer.pause();
@@ -447,7 +685,7 @@
     S.lastResult = r;
     if (S.tv) api.tvCmd({ type: 'result', r });
     S.ytOnTv = false;
-    api.addHistory({ singer: r.singer, title: r.title, artist: r.artist, total: r.total, mode: r.fake ? 'sorteio' : 'microfone' })
+    api.addHistory({ singer: r.singer, title: r.title, artist: r.artist, total: r.total, mode: r.fake ? 'sorteio' : r.manual ? 'sem detecção' : 'microfone' })
       .then((h) => { S.lib.history = h; renderQueue(); });
     showScore(r);
   }
@@ -461,7 +699,7 @@
     $('rMsg').textContent = r.total >= 95 ? 'Lendário!' : r.total >= 85 ? 'Arrasou!' : r.total >= 70 ? 'Mandou bem!' : r.total >= 50 ? 'Boa! Dá pra mais.' : 'Bora de novo?';
     $('rBrk').hidden = r.fake;
     if (!r.fake) { $('rTune').textContent = r.tune + '%'; $('rPres').textContent = r.presence + '%'; $('rStab').textContent = r.stab + '%'; }
-    $('rNote').textContent = r.fake ? 'Nota sorteada (modo sorteio)' : 'Nota calculada pelo microfone';
+    $('rNote').textContent = r.fake ? 'Nota sorteada (modo sorteio)' : r.manual ? 'Nota escolhida por você (modo sem detecção)' : 'Nota calculada pelo microfone';
     $('rNext').hidden = !S.queue.length;
     if (S.queue.length) $('rNext').textContent = `Próximo: ${S.queue[0].singer} · ${S.queue[0].song.title}`;
     $('rAgain').hidden = !!(S.current && S.current.youtube);
@@ -469,8 +707,8 @@
     const t0 = performance.now(), dur = r.fake ? 2200 : 1400;
     (function anim(t) {
       const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      const v = r.fake && k < 0.7 ? rnd(10, 99) : Math.round(r.total * e);
-      $('rTotal').textContent = v;
+      const v = r.fake && k < 0.7 ? rnd(10, 99) : k < 1 ? Math.round(r.total * e) : r.total;
+      $('rTotal').textContent = fmtScore(v);
       $('rRing').style.background = `conic-gradient(#fff ${v * 3.6}deg,rgba(255,255,255,.1) 0)`;
       if (k < 1) requestAnimationFrame(anim);
     })(t0);
@@ -494,15 +732,17 @@
   }
   async function ytScoreToggle() {
     if (S.ytScoring) return ytScoreStop(true);
-    if (!(await ensureMic())) toast('Microfone não encontrado: a nota será sorteada.');
+    const manual = S.lib.settings.scoreMode === 'manual';
+    if (!manual && !(await ensureMic())) toast('Microfone não encontrado: a nota será sorteada.');
     if (!video.paused) video.pause();
     S.ytScoring = true;
     S.current = { song: { title: S.ytTitle || 'Música do YouTube', artist: 'YouTube' }, singer: singerName(), youtube: true };
-    S.mode = S.micOk ? 'mic' : 'fake';
+    S.mode = manual ? 'manual' : S.micOk ? 'mic' : 'fake';
+    sim.reset();
     scorer.begin();
-    $('ytLive').hidden = !S.micOk;
+    $('ytLive').hidden = S.mode === 'fake';
     $('ytScoreBtn').textContent = 'Finalizar e ver nota';
-    toast(S.micOk ? 'Pontuando! Dê play no vídeo e cante.' : 'Modo sorteio: cante e toque em Finalizar.');
+    toast(manual ? 'Modo sem detecção: dê play e cante. No fim eu pergunto a nota.' : S.micOk ? 'Pontuando! Dê play no vídeo e cante.' : 'Modo sorteio: cante e toque em Finalizar.');
   }
   function ytScoreStop(show) {
     S.ytScoring = false;
@@ -535,6 +775,7 @@
     $('histInfo').textContent = S.lib.history.length + ' notas guardadas';
     renderDisplays();
     $('previewChk').checked = previewOn();
+    $('autoLyricsChk').checked = S.lib.settings.autoLyrics !== false;
     await ensureMic();
     try {
       const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
@@ -566,6 +807,7 @@
   $('sens').addEventListener('change', (e) => saveSettings({ sensitivity: +e.target.value }));
   $('defMode').addEventListener('change', (e) => saveSettings({ scoreMode: e.target.value }));
   $('previewChk').addEventListener('change', (e) => saveSettings({ preview: e.target.checked }));
+  $('autoLyricsChk').addEventListener('change', (e) => saveSettings({ autoLyrics: e.target.checked }));
   $('singer').addEventListener('change', (e) => saveSettings({ singer: e.target.value.trim() }));
 
   // ---------- edição ----------
@@ -576,15 +818,20 @@
       <label class="field"><span>Artista</span><input type="text" name="artist" value="${esc(song.artist)}"></label>
       <label class="field"><span>Gênero desta música (vazio = o do artista)</span><input type="text" name="genre" list="genreList2" value="${esc(song.genre || '')}"></label>
       <datalist id="genreList2">${allGenres().map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
+      <label class="field"><span>Tipo de vídeo</span><select name="kind">
+        <option value="">Automático (agora: ${kindOf(Object.assign({}, song, { kind: null })) === 'clip' ? 'videoclipe' : 'karaokê'})</option>
+        <option value="karaoke"${song.kind === 'karaoke' ? ' selected' : ''}>Karaokê (a letra já está no vídeo)</option>
+        <option value="clip"${song.kind === 'clip' ? ' selected' : ''}>Videoclipe (mostrar a letra ao lado)</option></select></label>
       <p class="note" style="word-break:break-all">${esc(song.path)}</p>
       <div class="row-btns"><button class="btn pri" type="submit">Salvar</button><button class="btn gho" type="button" data-action="closeModal">Cancelar</button>
+      <button class="btn gho" type="button" data-action="editLyrics" data-id="${song.id}">Letra…</button>
       <button class="btn gho" type="button" data-action="showFile" data-id="${song.id}">Mostrar arquivo</button></div></form>`;
     m.hidden = false;
     m.querySelector('input').focus();
     $('editForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = new FormData(e.target);
-      const upd = await api.updateSong(song.id, { title: f.get('title').trim() || song.title, artist: f.get('artist').trim() || song.artist, genre: f.get('genre').trim() || null });
+      const upd = await api.updateSong(song.id, { title: f.get('title').trim() || song.title, artist: f.get('artist').trim() || song.artist, genre: f.get('genre').trim() || null, kind: f.get('kind') || null });
       Object.assign(song, upd); delete song._k;
       if (!S.lib.artists[song.artist]) S.lib.artists[song.artist] = { genre: null, source: null };
       m.hidden = true; renderLibrary(); toast('Música atualizada');
@@ -670,6 +917,31 @@
       case 'edit': return openEdit(song);
       case 'showFile': return api.showFile(el.dataset.id);
       case 'closeModal': $('modal').hidden = true; return;
+      case 'askScore': return askScore();
+      case 'sbHide': return hideScoreBar();
+      case 'editLyrics': return openLyrics(song || (S.current && !S.current.youtube ? S.current.song : null));
+      case 'lyrShift': return setOffset((S.lyrics ? S.lyrics.offset || 0 : 0) + +el.dataset.d);
+      case 'lyrFirst': {
+        const first = S.lyrics && S.lyrics.synced && S.lyrics.synced.find((l) => l.text);
+        if (first) { setOffset(songClock() - first.t); toast('Letra ajustada: primeira linha agora'); }
+        return;
+      }
+      case 'lyrSync': return startSync();
+      case 'syncMark': if (S.sync && S.sync.times.length < S.sync.lines.length) { S.sync.times.push(songClock()); renderSync(); } return;
+      case 'syncUndo': if (S.sync) { S.sync.times.pop(); renderSync(); } return;
+      case 'syncDone': return S.sync && finishSync();
+      case 'syncCancel': $('syncBar').hidden = true; S.sync = null; return;
+      case 'lyrFetch': {
+        const form = $('lyrForm');
+        $('lyrStatus').textContent = 'Buscando…';
+        const res = await api.fetchLyrics(el.dataset.id);
+        if (!res) { $('lyrStatus').textContent = 'Não encontrei esta letra. Confira o nome da música e do artista, ou cole a letra.'; return; }
+        form.t.value = L.toText(res); form.dataset.source = 'LRCLIB';
+        $('lyrStatus').textContent = `Encontrada no LRCLIB (${res.synced ? 'sincronizada' : 'sem tempo'}). Clique em Salvar.`;
+        return;
+      }
+      case 'lyrClear': $('lyrForm').t.value = ''; $('lyrStatus').textContent = 'Clique em Salvar para apagar a letra.'; return;
+      case 'pickScore': return pickScore(el.dataset.v === 'rnd' ? rnd(65, 100) : +el.dataset.v);
       case 'queueAll': filteredSongs().forEach((s) => S.queue.push({ song: s, singer: singerName() })); renderQueue(); return toast('Músicas adicionadas à fila');
       case 'clearFilter': {
         const toTab = S.artist ? 'artists' : S.genre ? 'genres' : S.tab;
@@ -720,7 +992,7 @@
     const g = e.target.closest('[data-genre]');
     if (g) { S.genre = g.dataset.genre; S.artist = null; renderLibrary(); document.querySelector('.main').scrollTop = 0; return; }
     const md = e.target.closest('[data-mode]');
-    if (md) { if (md.dataset.mode === 'mic') { ensureMic().then((ok) => { if (ok) setMode('mic'); else toast('Microfone não encontrado'); }); } else setMode('fake'); return; }
+    if (md) { if (md.dataset.mode === 'mic') { ensureMic().then((ok) => { if (ok) setMode('mic'); else toast('Microfone não encontrado'); }); } else setMode(md.dataset.mode); return; }
     const yt = e.target.closest('[data-yt]');
     if (yt && webview) { const k = yt.dataset.yt; if (k === 'back' && webview.canGoBack()) webview.goBack(); if (k === 'forward' && webview.canGoForward()) webview.goForward(); if (k === 'home') webview.loadURL('https://www.youtube.com/'); return; }
     if (e.target.id === 'modal') $('modal').hidden = true;
@@ -735,6 +1007,7 @@
     if (e.target.matches('input, select, textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
     if (e.key === 'Escape' && !$('modal').hidden) { $('modal').hidden = true; return; }
     if (S.view !== 'player' || !S.current) return;
+    if (e.key === ' ' && S.sync) { if (!e.target.closest('button')) { e.preventDefault(); act('syncMark', e.target); } return; }
     if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); P.toggle(); }
     else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
     else if (e.key === 'ArrowRight') P.seek(P.time + 5);

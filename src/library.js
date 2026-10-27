@@ -29,6 +29,9 @@ const MB_GENRES = [
   [/folk/, 'Folk'], [/indie/, 'Indie'], [/pop/, 'Pop']
 ];
 
+// Vídeo de karaokê (letra já no vídeo) ou videoclipe (o Amethyst mostra a letra ao lado).
+const CLIP_FOLDER = /^(clipes?|videoclipes?|video ?clips?|music ?videos?|clips?)$/;
+const KARAOKE_NAME = /karaok|kara[oô]k|playback|instrumental/i;
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const hash = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
@@ -109,10 +112,11 @@ async function open(userData) {
         // Sem "Artista - Música" no nome: usa a pasta do arquivo como artista, se houver uma.
         const folderArtist = dirs.length && !FOLDER_GENRES[norm(dirs[dirs.length - 1])] ? dirs[dirs.length - 1] : null;
         const folderGenre = dirs.map((d) => FOLDER_GENRES[norm(d)]).find(Boolean) || null;
+        const kindAuto = KARAOKE_NAME.test(f) ? 'karaoke' : dirs.some((d) => CLIP_FOLDER.test(norm(d))) ? 'clip' : 'karaoke';
         const song = Object.assign({
-          id, plays: 0, fav: false, lastPlayed: 0, duration: 0, thumb: null, unsupported: false, edited: false, genre: null
+          id, plays: 0, fav: false, lastPlayed: 0, duration: 0, thumb: null, unsupported: false, edited: false, genre: null, kind: null
         }, prev, {
-          path: f, file: path.basename(f), size: st.size, mtime: st.mtimeMs, folderGenre
+          path: f, file: path.basename(f), size: st.size, mtime: st.mtimeMs, folderGenre, kindAuto
         });
         if (!song.edited) {
           song.title = parsed.title;
@@ -134,7 +138,7 @@ async function open(userData) {
     async updateSong(id, patch) {
       const s = data.songs.find((x) => x.id === id);
       if (!s) return;
-      const allowed = ['title', 'artist', 'genre', 'fav'];
+      const allowed = ['title', 'artist', 'genre', 'fav', 'kind'];
       for (const k of allowed) if (k in patch) s[k] = patch[k];
       if ('title' in patch || 'artist' in patch) s.edited = true;
       if (s.artist && !data.artists[s.artist]) data.artists[s.artist] = { genre: null, source: null };

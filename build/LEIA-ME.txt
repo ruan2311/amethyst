@@ -1,4 +1,4 @@
-﻿AMETHYST 1.0.0 - karaokê
+﻿AMETHYST 1.1.0 - karaokê
 =====================================
 
 COMO ABRIR
@@ -30,6 +30,24 @@ TELA DA TV (MODO KARAOKÊ)
   - Se o programa abrir na tela errada: Configurações > "Qual tela é a TV?".
   - Dois cliques na TV (ou F) liga/desliga a tela cheia dela.
   - YouTube na TV: abra o vídeo na aba YouTube e clique em "Mandar para a TV".
+
+MODO SEM DETECÇÃO (enquanto os microfones não chegam ao notebook)
+  Configurações > Pontuação padrão > "Sem detecção".
+  - A TV mostra a barra de tom de karaokê seguindo a melodia do vídeo
+    (o Amethyst analisa a música sozinho; da 2ª vez em diante é instantâneo).
+  - Faltando 1 minuto, aparece uma barrinha discreta embaixo no notebook
+    para escolher a nota (botões rápidos ou digite, ex.: 87,5 e Enter).
+  - Se ninguém escolher, sai uma nota aleatória acima de 80.
+
+VIDEOCLIPES COM LETRA
+  - Coloque os clipes numa pasta chamada "Clipes" (ou marque no lápis da
+    música: Tipo de vídeo > Videoclipe).
+  - A letra é buscada na internet pelo nome da música (LRCLIB), ou lida de
+    um arquivo .lrc com o mesmo nome do vídeo, ou colada em "Editar letra".
+  - Na TV o vídeo fica à esquerda e a letra à direita.
+  - Letra adiantada/atrasada? No Palco use os botões de tempo ou
+    "1ª linha começa agora". Letra sem tempo? Use "Sincronizar" e aperte
+    Espaço quando cada linha começar.
 
 ONDE FICAM OS DADOS
   %APPDATA%\Amethyst  (biblioteca, miniaturas, notas e o arquivo amethyst.log)

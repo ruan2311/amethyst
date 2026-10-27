@@ -19,6 +19,8 @@ O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
   Nomeie os arquivos como `Artista - Música.mp4`. Subpastas com nome de gênero (`Sertanejo`, `MPB`…) viram o gênero, e o resto pode ser buscado automaticamente no MusicBrainz.
 - **Fila** com o nome de quem vai cantar.
 - **Nota pelo microfone**: detecta o tom da voz em tempo real e mede afinação, presença e estabilidade. Sem microfone, há o modo sorteio.
+- **Modo sem detecção**: a TV mostra a barra de tom de karaokê seguindo a melodia real do vídeo (analisada pelo próprio app) e, faltando 1 minuto, uma barrinha discreta no notebook pergunta a nota. Se ninguém escolher, sai uma nota acima de 80.
+- **Videoclipes com letra**: vídeos marcados como videoclipe (ou dentro de uma pasta `Clipes`) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; dá para ajustar o tempo e sincronizar apertando Espaço.
 - **Tela da TV**: com a TV ligada como tela estendida (Win + P → Estender), a TV mostra a apresentação de quem vai cantar, o vídeo, a nota ao vivo, o resultado e a fila. O notebook fica com os controles.
 - **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado), com opção de mandar o vídeo para a TV.
 
@@ -40,7 +42,7 @@ node build/package-win.js dist/Amethyst      # monta a versão Windows (x64), fu
 
 - `src/main.js` — janelas, servidor local de vídeos (`media://`), tela da TV
 - `src/library.js` — varredura das pastas e banco da biblioteca (`library.json`)
-- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`) e a pontuação (`scoring.js`)
+- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) e letras (`lyrics.js`)
 
 Para testar sem clicar: `Amethyst.exe --selftest=C:\pasta` (com vídeos em `C:\pasta\videos`) passa por todas as telas, salva prints e grava o log.
 
