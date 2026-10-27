@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' media: data:; media-src media: blob:; font-src 'self'; connect-src 'self' media:">
+<title>Amethyst</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+<nav class="side" aria-label="Menu principal">
+  <div class="brand">
+    <span class="brand-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4" stroke-width="1.6"/><ellipse cx="13" cy="11.5" rx="6.6" ry="2.6" stroke-width="1.4" opacity=".8"/><ellipse cx="14" cy="11" rx="3.6" ry="1.4" stroke-width="1.2" opacity=".6"/><circle cx="14.6" cy="10.8" r="1" fill="#fff" stroke="none"/></svg></span>
+    <span>Amethyst</span>
+  </div>
+  <button class="nav" data-nav="library"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h4v16H4z"/><path d="M10 4h4v16h-4z"/><path d="M16.5 4.5l3.8 1-3.9 14.6-3.8-1"/></svg>Biblioteca</button>
+  <button class="nav" data-nav="youtube"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z"/></svg>YouTube</button>
+  <button class="nav" data-nav="player"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>Palco<span class="badge" id="queueBadge" hidden>0</span></button>
+  <div class="sec">Coleções</div>
+  <button class="nav" data-coll="fav"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6C19 16.5 12 21 12 21z"/></svg>Favoritas</button>
+  <button class="nav" data-coll="top"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Mais cantadas</button>
+  <button class="nav" data-coll="recent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recentes</button>
+  <div class="sec">Sistema</div>
+  <button class="nav" data-nav="settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Configurações</button>
+  <button class="tvbtn" id="tvBtn" data-action="tvToggle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span><b id="tvBtnText">Tela da TV</b><small id="tvBtnSub"></small></span></button>
+  <button class="mic" id="micChip" data-nav="settings"><i></i><span>Microfone</span></button>
+</nav>
+
+<main class="main">
+
+  <!-- BIBLIOTECA -->
+  <section id="v-library" class="view">
+    <div class="hero">
+      <svg class="worm" viewBox="300 110 520 280" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <defs>
+          <radialGradient id="whGlow" cx="600" cy="232" r="280" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7c5cff" stop-opacity=".55"/><stop offset=".45" stop-color="#3a63ff" stop-opacity=".14"/><stop offset="1" stop-color="#3a63ff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="whCore" cx="600" cy="232" r="22" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#c9b8ff"/><stop offset="1" stop-color="#5b2cff" stop-opacity="0"/></radialGradient>
+          <linearGradient id="whTail" x1="330" y1="150" x2="440" y2="190" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".85"/></linearGradient>
+        </defs>
+        <circle cx="600" cy="232" r="280" fill="url(#whGlow)" stroke="none"/>
+        <circle cx="580" cy="245" r="200" stroke-width="1.4" stroke-dasharray="0 9" opacity=".3"/>
+        <g transform="rotate(-14 580 245)" class="worm-rings">
+          <ellipse cx="560.0" cy="250.0" rx="240.0" ry="81.6" stroke-width="2.60" opacity="0.95"/>
+          <ellipse cx="564.0" cy="248.2" rx="202.6" ry="68.9" stroke-width="2.46" opacity="0.89"/>
+          <ellipse cx="568.0" cy="246.4" rx="168.0" ry="57.1" stroke-width="2.32" opacity="0.83"/>
+          <ellipse cx="572.0" cy="244.6" rx="136.3" ry="46.4" stroke-width="2.18" opacity="0.77"/>
+          <ellipse cx="576.0" cy="242.8" rx="107.7" ry="36.6" stroke-width="2.04" opacity="0.71"/>
+          <ellipse cx="580.0" cy="241.0" rx="82.2" ry="27.9" stroke-width="1.90" opacity="0.65"/>
+          <ellipse cx="584.0" cy="239.2" rx="60.0" ry="20.4" stroke-width="1.76" opacity="0.59"/>
+          <ellipse cx="588.0" cy="237.4" rx="41.4" ry="14.1" stroke-width="1.62" opacity="0.53"/>
+          <ellipse cx="592.0" cy="235.6" rx="26.8" ry="9.1" stroke-width="1.48" opacity="0.47"/>
+          <ellipse cx="596.0" cy="233.8" rx="16.5" ry="5.6" stroke-width="1.34" opacity="0.41"/>
+          <g stroke-width="1.2" opacity=".28">
+            <path d="M800.0 250.0 L766.6 248.2 L736.0 246.4 L708.3 244.6 L683.7 242.8 L662.2 241.0 L644.0 239.2 L629.4 237.4 L618.8 235.6 L612.5 233.8 L612.0 232.0"/>
+            <path d="M767.8 290.8 L739.5 282.6 L713.5 275.0 L690.1 267.8 L669.2 261.1 L651.2 255.0 L636.0 249.4 L623.9 244.4 L615.2 240.2 L610.3 236.6 L610.4 234.0"/>
+            <path d="M680.0 320.7 L665.3 307.9 L652.0 295.9 L640.2 284.7 L629.8 274.5 L621.1 265.2 L614.0 256.9 L608.7 249.6 L605.4 243.5 L604.3 238.7 L606.0 235.5"/>
+            <path d="M560.0 331.6 L564.0 317.1 L568.0 303.5 L572.0 291.0 L576.0 279.4 L580.0 268.9 L584.0 259.6 L588.0 251.5 L592.0 244.7 L596.0 239.4 L600.0 236.1"/>
+            <path d="M440.0 320.7 L462.7 307.9 L484.0 295.9 L503.8 284.7 L522.2 274.5 L538.9 265.2 L554.0 256.9 L567.3 249.6 L578.6 243.5 L587.7 238.7 L594.0 235.5"/>
+            <path d="M352.2 290.8 L388.5 282.6 L422.5 275.0 L453.9 267.8 L482.8 261.1 L508.8 255.0 L532.0 249.4 L552.1 244.4 L568.8 240.2 L581.7 236.6 L589.6 234.0"/>
+            <path d="M320.0 250.0 L361.4 248.2 L400.0 246.4 L435.7 244.6 L468.3 242.8 L497.8 241.0 L524.0 239.2 L546.6 237.4 L565.2 235.6 L579.5 233.8 L588.0 232.0"/>
+            <path d="M352.2 209.2 L388.5 213.8 L422.5 217.8 L453.9 221.4 L482.8 224.5 L508.8 227.0 L532.0 229.0 L552.1 230.4 L568.8 231.0 L581.7 231.0 L589.6 230.0"/>
+            <path d="M440.0 179.3 L462.7 188.5 L484.0 196.9 L503.8 204.5 L522.2 211.1 L538.9 216.8 L554.0 221.5 L567.3 225.2 L578.6 227.7 L587.7 228.9 L594.0 228.5"/>
+            <path d="M560.0 168.4 L564.0 179.3 L568.0 189.3 L572.0 198.2 L576.0 206.2 L580.0 213.1 L584.0 218.8 L588.0 223.3 L592.0 226.5 L596.0 228.2 L600.0 227.9"/>
+            <path d="M680.0 179.3 L665.3 188.5 L652.0 196.9 L640.2 204.5 L629.8 211.1 L621.1 216.8 L614.0 221.5 L608.7 225.2 L605.4 227.7 L604.3 228.9 L606.0 228.5"/>
+            <path d="M767.8 209.2 L739.5 213.8 L713.5 217.8 L690.1 221.4 L669.2 224.5 L651.2 227.0 L636.0 229.0 L623.9 230.4 L615.2 231.0 L610.3 231.0 L610.4 230.0"/>
+          </g>
+        </g>
+        <circle class="worm-core" cx="600" cy="232" r="22" fill="url(#whCore)" stroke="none"/>
+        <circle cx="600" cy="232" r="3.2" fill="#fff" stroke="none"/>
+        <path d="M330 150L440 190" stroke="url(#whTail)" stroke-width="2.4"/>
+        <circle cx="442" cy="191" r="3.4" fill="#fff" stroke="none"/>
+        <circle cx="760" cy="350" r="11" fill="#0e0f16" stroke-width="2" opacity=".85"/>
+        <g stroke-width="1.6" opacity=".8"><path d="M740 130v14M733 137h14"/><path d="M470 330v10M465 335h10" opacity=".6"/><path d="M800 230v10M795 235h10" opacity=".6"/></g>
+      </svg>
+      <div class="hero-t">
+        <span class="lbl">Amethyst · karaokê</span>
+        <h1 class="t" id="greet" style="font-size:36px">Boa noite! Quem abre o show?</h1>
+        <p class="sub" id="heroStats"></p>
+        <div class="row-btns" style="margin-top:8px">
+          <button class="btn pri" data-action="startQueue">Começar a fila</button>
+          <button class="btn gho" data-action="surprise">Música surpresa</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="top">
+      <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" id="search" placeholder="Buscar música ou artista…" aria-label="Buscar música ou artista" autocomplete="off"></label>
+      <div class="tabs" role="tablist">
+        <button class="tab" data-tab="artists">Artistas</button>
+        <button class="tab" data-tab="genres">Gêneros</button>
+        <button class="tab" data-tab="songs">Todas as músicas</button>
+      </div>
+    </div>
+    <div id="libBody"></div>
+  </section>
+
+  <!-- YOUTUBE -->
+  <section id="v-youtube" class="view" hidden>
+    <div class="top">
+      <div class="row-btns">
+        <button class="ibtn" data-yt="back" aria-label="Voltar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="ibtn" data-yt="forward" aria-label="Avançar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+        <button class="ibtn" data-yt="home" aria-label="Início do YouTube"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9H3z"/></svg></button>
+      </div>
+      <form class="search" id="ytForm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" id="ytQuery" placeholder="Buscar no YouTube (karaokê é somado sozinho)" aria-label="Buscar no YouTube"></form>
+      <div class="row-btns" id="ytTvBox" hidden>
+        <button class="btn gho" data-action="ytToTv">Mandar para a TV</button>
+        <button class="ibtn" data-action="ytTvToggle" aria-label="Pausar ou tocar na TV" title="Pausar/tocar na TV"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5l9 7-9 7z"/><rect x="15" y="5" width="2.6" height="14" rx="1"/><rect x="19.4" y="5" width="2.6" height="14" rx="1"/></svg></button>
+      </div>
+      <div class="ytscore" id="ytScore">
+        <span class="ytlive" id="ytLive" hidden>0%</span>
+        <button class="btn glow" data-action="ytScoreToggle" id="ytScoreBtn">Pontuar esta música</button>
+      </div>
+    </div>
+    <div class="webwrap" id="webwrap"></div>
+  </section>
+
+  <!-- PALCO -->
+  <section id="v-player" class="view" hidden>
+    <div id="playerEmpty" class="empty-big">
+      <p>Nenhuma música tocando.</p>
+      <button class="btn pri" data-nav="library">Abrir biblioteca</button>
+    </div>
+    <div id="playerBox" hidden>
+      <div class="ph">
+        <div style="min-width:0">
+          <p class="sub" style="margin:0">Cantando agora · <b id="pSinger" style="color:#fff"></b></p>
+          <h1 class="t ell"><span id="pTitle"></span> <span id="pArtist" class="dim"></span></h1>
+        </div>
+        <button class="btn gho" data-nav="library">Escolher outra</button>
+      </div>
+      <div class="stage">
+        <div class="vbox" id="vbox">
+          <video id="video" preload="auto"></video>
+          <div class="ontv" id="onTv" hidden>Tocando na TV · prévia sem som</div>
+          <div class="hud" id="hud">
+            <div class="hud-top"><span id="hudName"></span><span class="hud-score" id="hudScore">0%</span></div>
+            <div class="hud-next" id="hudNext" hidden></div>
+          </div>
+          <div class="verr" id="verr" hidden>
+            <b>Este vídeo não abriu.</b>
+            <span>O formato (provavelmente AVI, WMV ou um codec antigo) ainda não é suportado no protótipo.</span>
+            <button class="btn gho" data-action="skip">Pular</button>
+          </div>
+        </div>
+        <div class="panel" id="scorePanel">
+          <div id="micPanel">
+            <span class="lbl">Pontuação ao vivo</span>
+            <div class="big"><span id="liveTotal">0</span><small>%</small></div>
+            <div class="notebox"><canvas id="trail" class="trail"></canvas><span class="noteName" id="noteName"></span></div>
+            <div class="meter"><div><span>Afinação</span><span id="mTune">0%</span></div><div class="trk"><i id="bTune"></i></div></div>
+            <div class="meter"><div><span>Presença</span><span id="mPres">0%</span></div><div class="trk"><i id="bPres"></i></div></div>
+            <div class="meter"><div><span>Estabilidade</span><span id="mStab">0%</span></div><div class="trk"><i id="bStab"></i></div></div>
+            <div class="meter"><div><span>Volume do microfone</span></div><div class="trk lvl"><i id="bLevel"></i></div></div>
+          </div>
+          <div id="fakePanel" hidden>
+            <span class="lbl">Modo sorteio</span>
+            <div class="big">??<small>%</small></div>
+            <p class="note">Sem microfone, sem análise: a nota é sorteada no fim da música.</p>
+          </div>
+        </div>
+      </div>
+      <div class="prog"><span id="tNow">0:00</span><div class="trk seek" id="seek"><i id="seekBar"></i></div><span id="tDur">0:00</span></div>
+      <div class="ctrl">
+        <button class="ibtn" data-action="playPause" id="ppBtn" aria-label="Pausar"></button>
+        <button class="ibtn" data-action="restart" aria-label="Recomeçar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+        <button class="ibtn" data-action="fullscreen" aria-label="Tela cheia (F)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <label class="vol"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg><input type="range" id="volume" min="0" max="100" value="90" aria-label="Volume da música"></label>
+        <div class="seg" role="group" aria-label="Tipo de pontuação">
+          <button data-mode="mic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg>Microfone</button>
+          <button data-mode="fake"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/><circle cx="8.5" cy="15.5" r="1"/></svg>Sorteio</button>
+        </div>
+        <span style="flex:1"></span>
+        <button class="btn pri" data-action="finish">Finalizar e ver nota</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section id="v-score" class="view" hidden>
+    <div class="res">
+      <div class="rcard">
+        <span class="lbl" id="rWho"></span>
+        <div class="ring" id="rRing"><div><span id="rTotal">0</span><small>%</small></div></div>
+        <div class="stars" id="rStars" role="img"></div>
+        <div class="rmsg" id="rMsg"></div>
+        <div class="brk" id="rBrk">
+          <div><b id="rTune">0%</b><span>Afinação</span></div>
+          <div><b id="rPres">0%</b><span>Presença</span></div>
+          <div><b id="rStab">0%</b><span>Estabilidade</span></div>
+        </div>
+        <p class="note" id="rNote"></p>
+        <div class="row-btns" style="justify-content:center">
+          <button class="btn pri" data-action="next" id="rNext"></button>
+          <button class="btn gho" data-action="again" id="rAgain">Cantar de novo</button>
+          <button class="btn gho" data-nav="library">Biblioteca</button>
+          <button class="btn gho" data-action="tvIdle" id="rTvIdle" hidden>Mostrar a fila na TV</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIGURAÇÕES -->
+  <section id="v-settings" class="view" hidden>
+    <div>
+      <h1 class="t">Configurações</h1>
+      <p class="sub" id="verText"></p>
+    </div>
+    <div class="cards">
+      <div class="scard">
+        <h2>Pastas de vídeos</h2>
+        <p class="note">O Amethyst procura vídeos nessas pastas (e nas subpastas). Nomeie os arquivos como <b>Artista - Música</b>. Subpastas com nome de gênero (ex.: <b>Sertanejo</b>) viram o gênero.</p>
+        <div id="folderList" class="flist"></div>
+        <div class="row-btns">
+          <button class="btn pri" data-action="addFolder">Adicionar pasta</button>
+          <button class="btn gho" data-action="rescan">Procurar de novo</button>
+        </div>
+      </div>
+      <div class="scard">
+        <h2>Gêneros automáticos</h2>
+        <p class="note">Busca o gênero de cada artista sem gênero no MusicBrainz (precisa de internet). Você pode corrigir qualquer gênero na página do artista.</p>
+        <div class="row-btns"><button class="btn gho" data-action="fetchGenres">Buscar gêneros agora</button></div>
+      </div>
+      <div class="scard">
+        <h2>Microfone e pontuação</h2>
+        <label class="field"><span>Microfone</span><select id="micSelect"></select></label>
+        <label class="field"><span>Sensibilidade <b id="sensVal"></b></span><input type="range" id="sens" min="0" max="100"></label>
+        <div class="meter"><div><span>Teste: fale ou cante</span><span id="testNote"></span></div><div class="trk lvl"><i id="testLevel"></i></div></div>
+        <label class="field"><span>Pontuação padrão</span>
+          <select id="defMode"><option value="mic">Microfone (semi-real)</option><option value="fake">Sorteio</option></select>
+        </label>
+        <p class="note">Dica: use microfone de mão perto da boca e deixe as caixas de som longe dele. Se a nota subir sozinha com a música, baixe a sensibilidade.</p>
+      </div>
+      <div class="scard">
+        <h2>Tela da TV</h2>
+        <p class="note">Ligue a TV no notebook (HDMI) e no Windows aperte <b>Win + P</b> → <b>Estender</b>. Depois use o botão <b>Tela da TV</b> no menu: a TV mostra o vídeo, quem está cantando, a nota e a fila; o notebook fica com os controles.</p>
+        <label class="field"><span>Qual tela é a TV?</span><select id="tvDisplay"></select></label>
+        <label class="check"><input type="checkbox" id="previewChk"><span>Mostrar a prévia do vídeo no notebook<br><small>Desligue se o notebook for fraco: assim o vídeo é processado só uma vez, na TV.</small></span></label>
+        <div class="row-btns"><button class="btn gho" data-action="tvToggle" id="tvSetBtn">Ligar a tela da TV</button><button class="btn gho" data-action="tvFull">Tela cheia na TV</button></div>
+      </div>
+      <div class="scard">
+        <h2>Histórico</h2>
+        <p class="note" id="histInfo"></p>
+        <div class="row-btns"><button class="btn gho" data-action="clearHistory">Apagar histórico de notas</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<aside class="rail" id="rail" aria-label="Fila e notas">
+  <div class="rh"><h2>Fila</h2><span class="cm" id="qCount"></span></div>
+  <label class="singer"><span>Quem vai cantar?</span><input type="text" id="singer" placeholder="Nome" maxlength="24" autocomplete="off"></label>
+  <div id="queueList" class="qlist"></div>
+  <button class="btn glow" data-action="startQueue" id="qStart">Começar a fila</button>
+  <h2 style="margin-top:14px">Notas da noite</h2>
+  <div id="histList"></div>
+</aside>
+
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<div class="modal" id="modal" hidden></div>
+
+<script src="scoring.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "amethyst",
+  "productName": "Amethyst",
+  "version": "0.1.0",
+  "description": "Amethyst — karaokê para Windows",
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "node build/package-win.js"
+  },
+  "devDependencies": {
+    "electron": "44.9.3",
+    "pe-library": "^1.0.1",
+    "resedit": "^2.0.3"
+  }
+}
