@@ -961,7 +961,7 @@
       checking: 'Procurando atualização no GitHub…',
       available: `A versão ${st.latest} está disponível (você tem a ${st.current}).`,
       downloading: `Baixando a versão ${st.latest}… ${st.progress}%`,
-      ready: `A versão ${st.latest} foi baixada e conferida. Está pronta para instalar.`,
+      ready: `A versão ${st.latest} foi baixada e conferida. Está pronta para instalar.` + (st.error ? ' ' + st.error : ''),
       installing: 'Instalando: o Amethyst vai fechar e abrir de novo sozinho.',
       error: st.error || 'Algo deu errado. Tente de novo.'
     })[st.state] + dev;

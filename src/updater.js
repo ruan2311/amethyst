@@ -164,13 +164,28 @@ try {
   Log 'ok'
 } catch { Log ("erro: " + $_) }
 $exe = Join-Path $Dest 'Amethyst.exe'
-if ($RunArgs) { Start-Process -FilePath $exe -ArgumentList $RunArgs } else { Start-Process -FilePath $exe }
+if ($RunArgs.Trim()) { Start-Process -FilePath $exe -ArgumentList $RunArgs } else { Start-Process -FilePath $exe }
 `, 'utf8');
-    const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
-      '-Zip', zip, '-Dest', installDir(), '-ProcId', String(process.pid), '-RunArgs', relaunchArgs.join(' ')];
-    spawn('powershell.exe', args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-    log('[atualização] instalando a', S.latest);
-    setTimeout(() => app.quit(), 300);
+    // O PowerShell precisa de um console: "start" abre ele como programa independente (console
+    // próprio, minimizado e oculto), que continua rodando depois que o Amethyst fecha.
+    const q = (v) => '"' + String(v).replace(/"/g, '') + '"';
+    const ps = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', q(script),
+      '-Zip', q(zip), '-Dest', q(installDir()), '-ProcId', String(process.pid), '-RunArgs', q(relaunchArgs.join(' ') || ' ')].join(' ');
+    const runLog = path.join(dir, 'aplicar.log');
+    fs.rmSync(runLog, { force: true });
+    spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/c', 'start "" /min ' + ps], { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: true }).unref();
+    // Só fecha depois que o instalador avisar que começou (ele escreve "inicio" no log antes de
+    // esperar o Amethyst fechar). Se não começar, o Amethyst continua aberto e mostra o erro.
+    for (let i = 0; i < 50; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      if (fs.existsSync(runLog)) {
+        log('[atualização] instalando a', S.latest);
+        setTimeout(() => app.quit(), 200);
+        return status();
+      }
+    }
+    log('[atualização] o instalador não começou');
+    set({ state: 'ready', error: 'Não deu para começar a instalação. Tente de novo ou baixe o zip no GitHub.' });
     return status();
   }
 
