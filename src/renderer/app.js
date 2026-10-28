@@ -454,7 +454,7 @@
     $('lyrSrc').textContent = !l ? 'Sem letra: use “Editar letra” para buscar ou colar.' : (l.synced ? 'Letra sincronizada' : 'Letra sem tempo: use “Sincronizar”') + (l.source ? ' · ' + l.source : '');
     $('lyrPrev').textContent = ''; $('lyrNext').textContent = '';
     $('lyrNow').textContent = !l ? (quiet ? '' : 'Sem letra para esta música') : l.synced ? '♪' : (l.plain.find(Boolean) || '');
-    if (S.tv && S.current && !S.current.youtube) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics() });
+    if (S.tv && S.current && !S.current.youtube) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics(), layout: S.lib.settings.tvLyrics || 'bottom' });
   }
   // A TV só mostra a letra quando ela também aparece aqui no notebook.
   const tvLyrics = () => ($('lyrBox').hidden ? null : S.lyrics);
@@ -661,7 +661,7 @@
         api.tvCmd({ type: 'load', song: { id: S.current.song.id, title: S.current.song.title, artist: S.current.song.artist },
           singer: S.current.singer, mode: S.mode, startAt: video.currentTime, intro: false, paused: wasPaused, volume: video.volume });
         if (S.melody) api.tvCmd({ type: 'melody', id: S.current.song.id, res: S.melody });
-        if (tvLyrics()) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics() });
+        if (tvLyrics()) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics(), layout: S.lib.settings.tvLyrics || 'bottom' });
       }
       toast(S.tvExternal ? 'TV ligada' : 'Janela da TV aberta (arraste para a TV e dê dois cliques para tela cheia)', 5000);
       return;
@@ -891,6 +891,7 @@
     $('histInfo').textContent = S.lib.history.length + ' notas guardadas';
     renderDisplays();
     $('previewChk').checked = previewOn();
+    $('tvLyrics').value = S.lib.settings.tvLyrics || 'bottom';
     $('autoLyricsChk').checked = S.lib.settings.autoLyrics !== false;
     await ensureMic();
     try {
@@ -923,6 +924,11 @@
   $('sens').addEventListener('change', (e) => saveSettings({ sensitivity: +e.target.value }));
   $('defMode').addEventListener('change', (e) => saveSettings({ scoreMode: e.target.value }));
   $('previewChk').addEventListener('change', (e) => saveSettings({ preview: e.target.checked }));
+  $('tvLyrics').addEventListener('change', async (e) => {
+    await saveSettings({ tvLyrics: e.target.value });
+    // Já troca na TV se tiver um videoclipe tocando.
+    if (S.tv && S.current && !S.current.youtube && tvLyrics()) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics(), layout: e.target.value });
+  });
   $('autoLyricsChk').addEventListener('change', (e) => saveSettings({ autoLyrics: e.target.checked }));
   $('singer').addEventListener('change', (e) => saveSettings({ singer: e.target.value.trim() }));
 

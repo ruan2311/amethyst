@@ -110,10 +110,15 @@
   }
 
   // ---------- letra (videoclipes) ----------
-  function setLyrics(l) {
+  // layout: 'bottom' = faixa por cima do pé do vídeo (estilo karaokê), 'side' = coluna ao lado.
+  function setLyrics(l, layout) {
     T.lyr = l; T.lyrIdx = -2;
-    document.body.classList.toggle('withlyrics', !!l);
-    $('lyrics').hidden = !l;
+    const side = layout === 'side';
+    document.body.classList.toggle('withlyrics', !!l && side);
+    document.body.classList.toggle('lybottom', !!l && !side);
+    $('lyrics').hidden = !l || !side;
+    $('lyBand').hidden = !l || side;
+    $('lbNow').textContent = ''; $('lbNext').textContent = '';
     const box = $('lyScroll');
     box.classList.toggle('plain', !!(l && !l.synced));
     box.style.transform = 'translateY(0)';
@@ -122,6 +127,7 @@
   setInterval(() => {
     const l = T.lyr;
     if (!l || T.screen !== 'play') return;
+    if (!$('lyBand').hidden) return bandTick(l);
     const box = $('lyScroll'), H = $('lyrics').clientHeight;
     if (l.synced) {
       const i = Lyr.lineAt(l, video.currentTime);
@@ -136,6 +142,31 @@
       box.style.transform = `translateY(${-(box.scrollHeight - H) * k}px)`;
     }
   }, 120);
+
+  // Faixa de baixo: linha da vez (vai enchendo de cor enquanto é cantada) e a próxima, menor.
+  function bandTick(l) {
+    const lines = l.synced || l.plain.map((text) => ({ text }));
+    let i;
+    if (l.synced) i = Lyr.lineAt(l, video.currentTime);
+    else if (video.duration) i = Math.floor((video.currentTime / video.duration) * lines.length); // sem tempo: segue o andamento
+    else i = 0;
+    const now = $('lbNow');
+    if (i !== T.lyrIdx) {
+      T.lyrIdx = i;
+      const cur = i >= 0 ? lines[i].text : '', next = lines.slice(Math.max(0, i + 1)).find((x) => x.text);
+      now.textContent = cur || (i >= 0 ? '♪' : '');
+      $('lbNext').textContent = next ? next.text : '';
+      now.style.transition = 'none'; now.style.setProperty('--p', '0%');
+      now.classList.remove('in'); void now.offsetWidth; now.classList.add('in');
+    }
+    // Preenchimento da linha: do começo dela até a próxima (no máximo o tempo de cantar o texto).
+    if (l.synced && i >= 0) {
+      const t0 = l.synced[i].t + (l.offset || 0), nx = l.synced[i + 1];
+      const dur = Math.max(0.6, Math.min((nx ? nx.t + (l.offset || 0) : t0 + 4) - t0, 0.6 + lines[i].text.length * 0.11));
+      const p = Math.max(0, Math.min(1, (video.currentTime - t0) / dur));
+      now.style.transition = '--p .12s linear'; now.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+    } else if (!l.synced) now.style.setProperty('--p', '100%');
+  }
 
   // ---------- barra de tom (modo sem detecção) ----------
   function karaoke(c) {
@@ -238,7 +269,7 @@
       case 'melody':
         if (T.mode === 'manual' && T.current && T.current.song && T.current.song.id === c.id) kbars.setTrack(c.res, () => video.currentTime);
         return;
-      case 'lyrics': if (T.current && T.current.song && T.current.song.id === c.id) setLyrics(c.lyr); return;
+      case 'lyrics': if (T.current && T.current.song && T.current.song.id === c.id) setLyrics(c.lyr, c.layout); return;
       case 'lyricsOffset': if (T.lyr) { T.lyr.offset = c.offset; T.lyrIdx = -2; } return;
       case 'result': return result(c.r);
       case 'queue': T.queue = c.queue || []; T.history = c.history || []; if (T.screen === 'idle') renderIdle(); return;
