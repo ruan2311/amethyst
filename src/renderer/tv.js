@@ -177,6 +177,13 @@
     $('kTotal').textContent = '0';
     kbars.reset();
   }
+  // Liga/desliga a pontuação ao vivo do YouTube (vídeos que já têm a letra não precisam).
+  function bars(on) {
+    const k = on && T.mode === 'manual';
+    document.body.classList.toggle('kmode', k);
+    $('kStrip').hidden = !k;
+    $('hudScore').hidden = !on || T.mode === 'fake';
+  }
   kbars.run(() => !$('kStrip').hidden && (T.screen === 'play' || T.screen === 'yt'));
   setInterval(() => { kbars.playing = T.screen === 'yt' ? !!T.ytPlaying : T.screen === 'play' && !video.paused; }, 200);
 
@@ -227,6 +234,7 @@
     $('hudScore').hidden = c.mode === 'fake';
     karaoke(c);
     setLyrics(null);
+    if (c.bars === false) bars(false);
     show('yt');
     if (T.yt) { T.yt.remove(); T.yt = null; } // vídeo anterior do YouTube não fica tocando escondido
     const w = document.createElement('webview');
@@ -279,6 +287,7 @@
       case 'idle': setLyrics(null); clearInterval(T.introTimer); video.pause(); video.removeAttribute('src'); video.load(); show('idle'); return renderIdle();
       case 'yt': return youtube(c);
       case 'ytcmd': return ytCmd(c.action);
+      case 'bars': if (T.screen === 'yt') bars(c.on); return;
     }
   });
 

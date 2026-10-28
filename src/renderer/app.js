@@ -91,7 +91,7 @@
     for (const v of ['library', 'youtube', 'player', 'score', 'settings']) $('v-' + v).hidden = v !== view;
     document.querySelectorAll('.nav[data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === view || (view === 'score' && b.dataset.nav === 'player')));
     document.querySelectorAll('.nav[data-coll]').forEach((b) => b.classList.toggle('on', view === 'library' && S.coll === b.dataset.coll));
-    if (view === 'youtube') { ensureWebview(); $('ytKaraoke').checked = S.lib.settings.ytKaraoke !== false; }
+    if (view === 'youtube') { ensureWebview(); $('ytKaraoke').checked = S.lib.settings.ytKaraoke !== false; renderYtBars(); }
     if (view === 'settings') renderSettings();
     if (view === 'library') renderLibrary();
     $('app').querySelector('.main').scrollTop = 0;
@@ -809,6 +809,19 @@
     const p = t.split(/\s+[-–—]\s+/);
     return p.length >= 2 ? { artist: p[0], title: p.slice(1).join(' - ') } : { artist: 'YouTube', title: t || 'Música do YouTube' };
   }
+  // Botão "Barra": pontuação ao vivo na TV nos vídeos do YouTube (desligue nos que já têm a letra).
+  const ytBarsOn = () => S.lib.settings.ytBars !== false;
+  function renderYtBars() {
+    const b = $('ytBarsBtn'), on = ytBarsOn();
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+  }
+  async function ytBarsToggle() {
+    await saveSettings({ ytBars: !ytBarsOn() });
+    renderYtBars();
+    if (S.tv) api.tvCmd({ type: 'bars', on: ytBarsOn() });
+    toast(ytBarsOn() ? 'Barra de pontuação ligada na TV' : 'Barra de pontuação desligada (a nota final continua aparecendo)');
+  }
   const ytIdOf = (url) => (String(url).match(/[?&]v=([\w-]{6,})/) || [])[1];
   // Põe o vídeo aberto na fila; quando chegar a vez, ele toca sozinho (na TV, se estiver ligada).
   function ytEnqueue() {
@@ -878,7 +891,7 @@
     if (!video.paused) video.pause();
     if (!S.ytScoring) await ytScoreToggle();
     S.ytOnTv = true;
-    api.tvCmd({ type: 'yt', url, singer: S.current.singer, title: S.ytTitle, mode: S.mode });
+    api.tvCmd({ type: 'yt', url, singer: S.current.singer, title: S.ytTitle, mode: S.mode, bars: ytBarsOn() });
     toast('Vídeo mandado para a TV');
   }
   $('ytForm').addEventListener('submit', (e) => { e.preventDefault(); const q = $('ytQuery').value.trim(); if (q) ytSearch(q); });
@@ -1088,6 +1101,7 @@
       case 'ytTvToggle': return api.tvCmd({ type: 'ytcmd', action: 'toggle' });
       case 'ytTvRestart': return api.tvCmd({ type: 'ytcmd', action: 'restart' });
       case 'ytEnqueue': return ytEnqueue();
+      case 'ytBars': return ytBarsToggle();
       case 'lyrToggle': return toggleLyrics();
       case 'fullscreen': return toggleFullscreen();
       case 'finish': return finish();
