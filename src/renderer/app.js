@@ -81,11 +81,13 @@
   const singerName = () => ($('singer').value.trim() || 'Convidado');
 
   // ---------- navegação ----------
+  const cele = window.AmethystCelebrate.create($('rCele')); // festa da nota (tela de resultado)
   function go(view) {
     if (S.view === 'youtube' && view !== 'youtube' && S.ytScoring) ytScoreStop(false);
     // Saindo da aba YouTube: pausa o vídeo de lá para não gastar processador escondido.
     if (S.view === 'youtube' && view !== 'youtube' && webview) webview.executeJavaScript("document.querySelectorAll('video').forEach((v)=>v.pause())").catch(() => {});
     S.view = view;
+    if (view !== 'score') cele.stop();
     for (const v of ['library', 'youtube', 'player', 'score', 'settings']) $('v-' + v).hidden = v !== view;
     document.querySelectorAll('.nav[data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === view || (view === 'score' && b.dataset.nav === 'player')));
     document.querySelectorAll('.nav[data-coll]').forEach((b) => b.classList.toggle('on', view === 'library' && S.coll === b.dataset.coll));
@@ -718,6 +720,10 @@
       $('rRing').style.background = `conic-gradient(#fff ${v * 3.6}deg,rgba(255,255,255,.1) 0)`;
       if (k < 1) requestAnimationFrame(anim);
     })(t0);
+    // Foi bem: festa no fundo quando a contagem chega na nota.
+    const vs = $('v-score');
+    vs.classList.remove('burst');
+    vs.dataset.tier = cele.start(r.total, $('rRing'), dur, () => vs.classList.add('burst'));
   }
 
   // ---------- YouTube ----------

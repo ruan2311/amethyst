@@ -21,6 +21,7 @@ O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
 - **Nota pelo microfone**: detecta o tom da voz em tempo real e mede afinação, presença e estabilidade. Sem microfone, há o modo sorteio.
 - **Modo sem detecção**: a TV mostra a barra de tom de karaokê seguindo a melodia real do vídeo (analisada pelo próprio app) e, faltando 1 minuto, uma barrinha discreta no notebook pergunta a nota. Se ninguém escolher, sai uma nota acima de 80.
 - **Videoclipes com letra**: vídeos marcados como videoclipe (dentro de uma pasta `Clipes` ou com "videoclipe", "clipe oficial" ou "official video" no nome do arquivo) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; dá para ajustar o tempo e sincronizar apertando Espaço. Se o tipo estiver em "Automático" e a música já tiver uma letra salva, ela aparece também.
+- **Comemoração da nota**: quem tira 70 ou mais ganha uma festa no fundo do resultado, no notebook e na TV: aurora violeta e rosa, cristais de ametista, ondas de anel e brilhos. Fica mais forte com 85+ e, com 95+ ("Lendário!"), ganha raios de luz e uma segunda explosão.
 - **Tela da TV**: com a TV ligada como tela estendida (Win + P → Estender), a TV mostra a apresentação de quem vai cantar, o vídeo, a nota ao vivo, o resultado e a fila. O notebook fica com os controles.
 - **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado), com opção de mandar o vídeo para a TV.
 
@@ -42,7 +43,7 @@ node build/package-win.js dist/Amethyst      # monta a versão Windows (x64), fu
 
 - `src/main.js` — janelas, servidor local de vídeos (`media://`), tela da TV
 - `src/library.js` — varredura das pastas e banco da biblioteca (`library.json`)
-- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) e letras (`lyrics.js`)
+- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), comemoração da nota (`celebrate.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) e letras (`lyrics.js`)
 
 Para testar sem clicar: `Amethyst.exe --selftest=C:\pasta` (com vídeos em `C:\pasta\videos`) passa por todas as telas, salva prints e grava o log.
 

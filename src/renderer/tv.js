@@ -16,6 +16,7 @@
 
   function show(name) {
     T.screen = name;
+    if (name !== 'result') cele.stop();
     for (const s of ['idle', 'intro', 'play', 'yt', 'result']) $('s-' + s).hidden = s !== name;
     const playing = name === 'play' || name === 'yt';
     document.body.classList.toggle('playing', playing);
@@ -149,6 +150,7 @@
   setInterval(() => { kbars.playing = T.screen === 'yt' || (T.screen === 'play' && !video.paused); }, 200);
 
   // ---------- nota ----------
+  const cele = window.AmethystCelebrate.create($('rCele'));
   function result(r) {
     clearInterval(T.introTimer);
     video.pause();
@@ -170,6 +172,10 @@
       $('rRing').style.background = `conic-gradient(#fff ${v * 3.6}deg,rgba(255,255,255,.1) 0)`;
       if (k < 1) requestAnimationFrame(anim); else $('rMsg').style.visibility = 'visible';
     })(t0);
+    // Foi bem: festa no fundo quando a contagem chega na nota.
+    const sr = $('s-result');
+    sr.classList.remove('burst');
+    sr.dataset.tier = cele.start(r.total, $('rRing'), dur, () => sr.classList.add('burst'));
     clearTimeout(T.resultTimer);
     T.resultTimer = setTimeout(() => { if (T.screen === 'result') { show('idle'); renderIdle(); } }, 20000);
   }
