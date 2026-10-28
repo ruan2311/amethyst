@@ -693,7 +693,7 @@
     tickLyrics();
     scorer.monitor = !document.hidden && (S.view === 'settings' || (S.view === 'player' && S.mode === 'mic'));
     if (S.mode === 'manual' && S.current && S.view !== 'score') {
-      const playing = S.current.youtube ? S.ytScoring : !P.paused;
+      const playing = S.current.youtube ? S.ytScoring && S.ytPlaying : !P.paused;
       if (playing) sim.step();
       kbars.playing = playing;
       kbars.skill = Math.max(0.3, sim.total / 100);
@@ -839,7 +839,9 @@
     if (!video.paused) video.pause();
     S.ytScoring = true;
     S.current = { song: ytSong(S.ytTitle), singer, youtube: true };
-    S.ytEnded = false;
+    S.ytEnded = false; S.ytPlaying = false;
+    // O vídeo da biblioteca que estava na TV sai de lá (senão continua tocando com a barra dele).
+    if (S.tv && !S.ytOnTv) api.tvCmd({ type: 'idle' });
     S.mode = manual ? 'manual' : S.micOk ? 'mic' : 'fake';
     sim.reset();
     scorer.begin();
@@ -856,8 +858,10 @@
   }
   // Estado do vídeo (daqui ou da TV), ~1x por segundo: pergunta a nota no fim e mostra o resultado quando acaba.
   const YT_STATE = "(()=>{const v=document.querySelector('video.html5-main-video')||document.querySelector('video'),p=document.querySelector('#movie_player');" +
-    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
+    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,paused:v.paused,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
   function ytState(st) {
+    // A barra e a nota ao vivo só andam com o vídeo tocando (pausa, anúncio e fim param tudo).
+    S.ytPlaying = !!st && !st.paused && !st.ad && !st.ended;
     if (!S.ytScoring || !st || st.ad || S.ytEnded) return;
     if (S.mode === 'manual' && !sim.asked && st.d > 20 && st.d - st.t < Math.min(60, st.d / 2)) askScore();
     if (st.d > 5 && (st.ended || st.t >= st.d - 0.4)) { S.ytEnded = true; ytScoreStop(true); }
@@ -865,7 +869,7 @@
   setInterval(() => {
     if (!S.ytScoring || S.ytOnTv || !webview || !webview.ready) return;
     webview.executeJavaScript(YT_STATE).then(ytState).catch(() => {});
-  }, 1000);
+  }, 500);
   async function ytToTv() {
     ensureWebview();
     const url = webview.getURL();

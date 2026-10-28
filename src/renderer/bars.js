@@ -53,18 +53,18 @@
       return k;
     }
 
-    // Frases de 4 a 7 notas, com pausas entre as frases, como uma melodia.
+    // Sem melodia real (YouTube): frases calmas de 3 a 6 notas, passos pequenos de altura e pausas entre as frases.
     generate(until) {
       while (this.genUntil < until) {
         let t = this.genUntil;
-        const count = Math.floor(rand(4, 8));
+        const count = Math.floor(rand(3, 7));
         for (let i = 0; i < count; i++) {
-          this.level = Math.max(1, Math.min(LEVELS - 2, this.level + Math.round(rand(-2.4, 2.4))));
-          const dur = rand(0.28, 0.95);
+          if (i) this.level = Math.max(2, Math.min(LEVELS - 3, this.level + Math.round(rand(-1.4, 1.4))));
+          const dur = rand(0.45, 1.25);
           this.notes.push({ start: t, end: t + dur, level: this.level, hit: 0, seen: 0, done: false });
-          t += dur + rand(0.03, 0.14);
+          t += dur + rand(0.06, 0.2);
         }
-        this.genUntil = t + rand(0.8, 1.8);
+        this.genUntil = t + rand(1.1, 2.2);
       }
       this.notes = this.notes.filter((n) => n.end > this.t - this.window);
     }

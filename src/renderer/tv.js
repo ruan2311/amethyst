@@ -178,7 +178,7 @@
     kbars.reset();
   }
   kbars.run(() => !$('kStrip').hidden && (T.screen === 'play' || T.screen === 'yt'));
-  setInterval(() => { kbars.playing = T.screen === 'yt' || (T.screen === 'play' && !video.paused); }, 200);
+  setInterval(() => { kbars.playing = T.screen === 'yt' ? !!T.ytPlaying : T.screen === 'play' && !video.paused; }, 200);
 
   // ---------- nota ----------
   const cele = window.AmethystCelebrate.create($('rCele'));
@@ -222,7 +222,7 @@
   function youtube(c) {
     clearInterval(T.introTimer); clearTimeout(T.resultTimer);
     video.pause();
-    T.current = c; T.mode = c.mode; T.trail = [];
+    T.current = c; T.mode = c.mode; T.trail = []; T.ytPlaying = false;
     $('hudWho').textContent = `${c.singer} · ${c.title || 'YouTube'}`;
     $('hudScore').hidden = c.mode === 'fake';
     karaoke(c);
@@ -239,11 +239,14 @@
     clearInterval(T.ytTimer);
     T.ytTimer = setInterval(() => {
       if (T.yt !== w) return clearInterval(T.ytTimer);
-      w.executeJavaScript(YT_STATE).then((st) => st && bridge.emit(Object.assign({ type: 'ytstate' }, st))).catch(() => {});
-    }, 1000);
+      w.executeJavaScript(YT_STATE).then((st) => {
+        T.ytPlaying = !!st && !st.paused && !st.ad && !st.ended; // a barra só anda com o vídeo tocando
+        if (st) bridge.emit(Object.assign({ type: 'ytstate' }, st));
+      }).catch(() => {});
+    }, 500);
   }
   const YT_STATE = "(()=>{const v=document.querySelector('video.html5-main-video')||document.querySelector('video'),p=document.querySelector('#movie_player');" +
-    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
+    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,paused:v.paused,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
   function ytCmd(action) {
     if (!T.yt) return;
     const js = action === 'toggle' ? "(()=>{const v=document.querySelector('video');if(v){v.paused?v.play():v.pause();}})()"
