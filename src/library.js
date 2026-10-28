@@ -32,6 +32,7 @@ const MB_GENRES = [
 // Vídeo de karaokê (letra já no vídeo) ou videoclipe (o Amethyst mostra a letra ao lado).
 const CLIP_FOLDER = /^(clipes?|videoclipes?|video ?clips?|music ?videos?|clips?)$/;
 const KARAOKE_NAME = /karaok|kara[oô]k|playback|instrumental/i;
+const CLIP_NAME = /\b(video ?clipes?|clipe oficial|clipe|official (music )?video|music video|video oficial)\b/;
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const hash = (s) => crypto.createHash('sha1').update(s).digest('hex');
 
@@ -39,9 +40,10 @@ const hash = (s) => crypto.createHash('sha1').update(s).digest('hex');
 function parseName(file) {
   let base = path.basename(file, path.extname(file));
   base = base.replace(/_/g, ' ')
-    .replace(/[\[(][^\])]*(karaok[eê]|kara[oô]k[eê]|playback|instrumental|lyrics?|letra|vers[aã]o|version|hd|1080p|720p|4k)[^\])]*[\])]/gi, '')
-    .replace(/\b(karaok[eê]|playback)\b/gi, '')
+    .replace(/[\[(][^\])]*(karaok[eê]|kara[oô]k[eê]|playback|instrumental|lyrics?|letra|vers[aã]o|version|hd|1080p|720p|4k|clipe|clip|v[ií]deo)[^\])]*[\])]/gi, '')
+    .replace(/\b(karaok[eê]|playback|v[ií]deo ?clipes?|clipe oficial|clipe|official (music )?video|music video|v[ií]deo oficial)(?=\s|$)/gi, '')
     .replace(/^\s*\d{1,4}\s*[-.)]\s*/, '')
+    .replace(/\s*[-–—|]\s*$/, '')
     .replace(/\s{2,}/g, ' ').trim();
   const parts = base.split(/\s+[-–—|]\s+/).map((p) => p.trim()).filter(Boolean);
   if (parts.length >= 2) return { artist: parts[0], title: parts.slice(1).join(' - ') };
@@ -112,7 +114,8 @@ async function open(userData) {
         // Sem "Artista - Música" no nome: usa a pasta do arquivo como artista, se houver uma.
         const folderArtist = dirs.length && !FOLDER_GENRES[norm(dirs[dirs.length - 1])] ? dirs[dirs.length - 1] : null;
         const folderGenre = dirs.map((d) => FOLDER_GENRES[norm(d)]).find(Boolean) || null;
-        const kindAuto = KARAOKE_NAME.test(f) ? 'karaoke' : dirs.some((d) => CLIP_FOLDER.test(norm(d))) ? 'clip' : 'karaoke';
+        const kindAuto = KARAOKE_NAME.test(f) ? 'karaoke'
+          : CLIP_NAME.test(norm(path.basename(f))) || dirs.some((d) => CLIP_FOLDER.test(norm(d))) ? 'clip' : 'karaoke';
         const song = Object.assign({
           id, plays: 0, fav: false, lastPlayed: 0, duration: 0, thumb: null, unsupported: false, edited: false, genre: null, kind: null
         }, prev, {

@@ -386,7 +386,11 @@
   function applyLyrics(song) {
     setLyrics(null, true);
     $('lyrBox').hidden = kindOf(song) !== 'clip';
-    if ($('lyrBox').hidden) return;
+    if ($('lyrBox').hidden) {
+      // Tipo automático, mas com letra já salva (baixada, colada ou .lrc): mostra mesmo assim.
+      if (!song.kind) api.getLyrics(song.id).then((lyr) => { if (lyr && S.current && S.current.song === song) { $('lyrBox').hidden = false; setLyrics(lyr); } });
+      return;
+    }
     $('lyrNow').textContent = 'Procurando a letra…';
     loadLyrics(song).then((lyr) => { if (S.current && S.current.song === song) setLyrics(lyr); });
   }
@@ -399,8 +403,10 @@
     $('lyrSrc').textContent = !l ? 'Sem letra: use “Editar letra” para buscar ou colar.' : (l.synced ? 'Letra sincronizada' : 'Letra sem tempo: use “Sincronizar”') + (l.source ? ' · ' + l.source : '');
     $('lyrPrev').textContent = ''; $('lyrNext').textContent = '';
     $('lyrNow').textContent = !l ? (quiet ? '' : 'Sem letra para esta música') : l.synced ? '♪' : (l.plain.find(Boolean) || '');
-    if (S.tv && S.current && !S.current.youtube) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: S.lyrics });
+    if (S.tv && S.current && !S.current.youtube) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics() });
   }
+  // A TV só mostra a letra quando ela também aparece aqui no notebook.
+  const tvLyrics = () => ($('lyrBox').hidden ? null : S.lyrics);
   function tickLyrics() {
     if (!S.lyrics || !S.lyrics.synced || $('lyrBox').hidden || document.hidden || S.view !== 'player') return;
     const i = L.lineAt(S.lyrics, songClock());
@@ -467,7 +473,7 @@
       const data = text.trim() ? Object.assign(p, { offset: lyr && p.synced ? lyr.offset || 0 : 0, source: text === orig && lyr ? lyr.source : (form.dataset.source || 'editada') }) : null;
       await api.saveLyrics(song.id, data);
       m.hidden = true;
-      if (S.current && S.current.song === song) { if (kindOf(song) === 'clip') $('lyrBox').hidden = false; setLyrics(data); }
+      if (S.current && S.current.song === song) { if (kindOf(song) === 'clip' || (data && !song.kind)) $('lyrBox').hidden = false; setLyrics(data); }
       toast(data ? 'Letra salva' : 'Letra apagada');
     });
     form._song = song;
@@ -604,7 +610,7 @@
         api.tvCmd({ type: 'load', song: { id: S.current.song.id, title: S.current.song.title, artist: S.current.song.artist },
           singer: S.current.singer, mode: S.mode, startAt: video.currentTime, intro: false, paused: wasPaused, volume: video.volume });
         if (S.melody) api.tvCmd({ type: 'melody', id: S.current.song.id, res: S.melody });
-        if (S.lyrics) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: S.lyrics });
+        if (tvLyrics()) api.tvCmd({ type: 'lyrics', id: S.current.song.id, lyr: tvLyrics() });
       }
       toast(S.tvExternal ? 'TV ligada' : 'Janela da TV aberta (arraste para a TV e dê dois cliques para tela cheia)', 5000);
       return;

@@ -20,7 +20,7 @@ O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
 - **Fila** com o nome de quem vai cantar.
 - **Nota pelo microfone**: detecta o tom da voz em tempo real e mede afinação, presença e estabilidade. Sem microfone, há o modo sorteio.
 - **Modo sem detecção**: a TV mostra a barra de tom de karaokê seguindo a melodia real do vídeo (analisada pelo próprio app) e, faltando 1 minuto, uma barrinha discreta no notebook pergunta a nota. Se ninguém escolher, sai uma nota acima de 80.
-- **Videoclipes com letra**: vídeos marcados como videoclipe (ou dentro de uma pasta `Clipes`) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; dá para ajustar o tempo e sincronizar apertando Espaço.
+- **Videoclipes com letra**: vídeos marcados como videoclipe (dentro de uma pasta `Clipes` ou com "videoclipe", "clipe oficial" ou "official video" no nome do arquivo) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; dá para ajustar o tempo e sincronizar apertando Espaço. Se o tipo estiver em "Automático" e a música já tiver uma letra salva, ela aparece também.
 - **Tela da TV**: com a TV ligada como tela estendida (Win + P → Estender), a TV mostra a apresentação de quem vai cantar, o vídeo, a nota ao vivo, o resultado e a fila. O notebook fica com os controles.
 - **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado), com opção de mandar o vídeo para a TV.
 
