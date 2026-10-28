@@ -50,15 +50,15 @@ body.playing .bg .worm{animation:none}
 
 /* Videoclipe: vídeo à esquerda, letra à direita */
 body.withlyrics #s-play{justify-content:flex-start}
-body.withlyrics #s-play video{width:64vw}
-.lyrics{position:absolute;top:0;right:0;bottom:0;width:36vw;overflow:hidden;background:linear-gradient(90deg,#000,#08080d 10%,#0e0e18)}
+body.withlyrics #s-play video{width:76vw}
+.lyrics{position:absolute;top:0;right:0;bottom:0;width:24vw;overflow:hidden;background:linear-gradient(90deg,#000,#08080d 10%,#0e0e18)}
 .lyrics::before,.lyrics::after{content:'';position:absolute;left:0;right:0;height:22vh;z-index:1;pointer-events:none}
 .lyrics::before{top:0;background:linear-gradient(#0b0b13,rgba(11,11,19,0))}
 .lyrics::after{bottom:0;background:linear-gradient(rgba(11,11,19,0),#0b0b13)}
-.ly-scroll{position:absolute;left:2.6vw;right:2.4vw;top:0;padding:40vh 0 60vh;transition:transform .55s cubic-bezier(.2,.8,.2,1);will-change:transform}
-.ly-scroll p{margin:0 0 1.8vh;font-size:2.1vw;font-weight:700;line-height:1.25;color:rgba(255,255,255,.38);transform-origin:left center;transition:color .3s,transform .3s}
+.ly-scroll{position:absolute;left:1.6vw;right:1.4vw;top:0;padding:40vh 0 60vh;transition:transform .55s cubic-bezier(.2,.8,.2,1);will-change:transform}
+.ly-scroll p{margin:0 0 1.6vh;font-size:1.6vw;font-weight:700;line-height:1.25;color:rgba(255,255,255,.38);transform-origin:left center;transition:color .3s,transform .3s}
 .ly-scroll p.past{color:rgba(255,255,255,.18)}
-.ly-scroll p.now{color:#fff;transform:scale(1.07);text-shadow:0 0 2vw rgba(185,166,255,.6)}
+.ly-scroll p.now{color:#fff;transform:scale(1.12);text-shadow:0 0 1.6vw rgba(185,166,255,.6)}
 .ly-scroll.plain p{color:rgba(255,255,255,.85);font-weight:600}
 .hud{position:fixed;inset:0;pointer-events:none;z-index:5}
 .hud-who{position:absolute;top:2.2vw;left:2.4vw;padding:.7vw 1.4vw;border-radius:99px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);font-size:1.4vw;font-weight:600;max-width:60vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -75,7 +75,8 @@ body.withlyrics #s-play video{width:64vw}
 .k-score small{font-size:1.1vw;color:rgba(232,234,240,.7)}
 body.kmode .hud-who,body.kmode .hud-score{display:none}
 /* Videoclipe: a faixa de tom para onde começa a letra */
-body.withlyrics .kstrip{right:36vw}
+body.withlyrics .kstrip{right:24vw}
+body.withlyrics .hud-score{right:26.4vw}
 .hud-next{position:absolute;bottom:2.4vw;right:2.4vw;padding:.9vw 1.6vw;border-radius:1.2vw;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.18);font-size:1.6vw;animation:pop .5s}
 
 /* Nota */
