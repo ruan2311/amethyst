@@ -25,6 +25,7 @@ O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
 - **Comemoração da nota**: quem tira 70 ou mais ganha uma festa no fundo do resultado, no notebook e na TV: aurora violeta e rosa, cristais de ametista, ondas de anel e brilhos. Fica mais forte com 85+ e, com 95+ ("Lendário!"), ganha raios de luz e uma segunda explosão.
 - **Tela da TV**: com a TV ligada como tela estendida (Win + P → Estender), a TV mostra a apresentação de quem vai cantar, o vídeo, a nota ao vivo, o resultado e a fila. O notebook fica com os controles.
 - **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado): busca com "karaokê" somado sozinho (dá para desligar), **Pôr na fila** o vídeo aberto, mandar para a TV e recomeçar lá. O botão **Barra** liga/desliga a pontuação ao vivo na TV, para vídeos que já vêm com a letra (a nota final continua aparecendo). Quando o vídeo acaba, a nota aparece sozinha; no modo sem detecção, a nota é perguntada no último minuto.
+- **Novidades** em Configurações: o que mudou em cada versão, da mais nova para a mais antiga, com a etiqueta **Novo**, **Correção** ou **Bug** em cada mudança. Na primeira vez que o Amethyst abre depois de uma atualização, um aviso aponta para lá.
 
 ## Limitações conhecidas
 
@@ -44,7 +45,7 @@ node build/package-win.js dist/Amethyst      # monta a versão Windows (x64), fu
 
 - `src/main.js` — janelas, servidor local de vídeos (`media://`), tela da TV
 - `src/library.js` — varredura das pastas e banco da biblioteca (`library.json`)
-- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), comemoração da nota (`celebrate.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) e letras (`lyrics.js`)
+- `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), comemoração da nota (`celebrate.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) letras (`lyrics.js`) e Novidades (`changelog.js`)
 
 Para testar sem clicar: `Amethyst.exe --selftest=C:\pasta` (com vídeos em `C:\pasta\videos`) passa por todas as telas, salva prints e grava o log.
 

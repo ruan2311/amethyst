@@ -1,7 +1,7 @@
 {
   "name": "amethyst",
   "productName": "Amethyst",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Amethyst — karaokê para Windows",
   "main": "src/main.js",
   "private": true,

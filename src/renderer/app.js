@@ -949,6 +949,26 @@
   $('autoLyricsChk').addEventListener('change', (e) => saveSettings({ autoLyrics: e.target.checked }));
   $('singer').addEventListener('change', (e) => saveSettings({ singer: e.target.value.trim() }));
 
+  // ---------- novidades ----------
+  const rich = (t) => esc(t).split('*').map((p, i) => (i % 2 ? `<b>${p}</b>` : p)).join('');
+  function openChangelog() {
+    const { TAGS, LOG } = window.AmethystChangelog;
+    const m = $('modal');
+    m.innerHTML = `<div class="mcard wide log"><h2>Novidades</h2><div class="log-body">${LOG.map((v) =>
+      `<h3 class="log-ver">${esc(v.version)}<span>${esc(v.date)}</span></h3><ul class="log-list">${v.items.map(([tag, text]) =>
+        `<li><span class="log-tag ${tag}">${TAGS[tag]}</span>${rich(text)}</li>`).join('')}</ul>`).join('')}</div>
+      <div class="row-btns"><button class="btn pri" type="button" data-action="closeModal">Fechar</button></div></div>`;
+    m.hidden = false;
+  }
+  // Primeira abertura depois de uma atualização: avisa e aponta para as Novidades.
+  // Sem versão salva mas com pastas ou notas = veio de uma versão anterior à 1.6.0.
+  async function announceUpdate() {
+    const v = await api.version(), prev = S.lib.settings.lastVersion;
+    if (prev === v) return;
+    saveSettings({ lastVersion: v });
+    if (prev || S.lib.folders.length || S.lib.history.length) setTimeout(() => toast(`Amethyst atualizado para a ${v}! Veja o que mudou em Configurações → Novidades`, 7000), 1500);
+  }
+
   // ---------- edição ----------
   function openEdit(song) {
     const m = $('modal');
@@ -1056,6 +1076,7 @@
       case 'edit': return openEdit(song);
       case 'showFile': return api.showFile(el.dataset.id);
       case 'closeModal': $('modal').hidden = true; return;
+      case 'changelog': return openChangelog();
       case 'askScore': return askScore();
       case 'sbHide': return hideScoreBar();
       case 'editLyrics': return openLyrics(song || (S.current && !S.current.youtube ? S.current.song : null));
@@ -1169,6 +1190,7 @@
     setMode(S.lib.settings.scoreMode || 'mic');
     go('library');
     renderQueue();
+    announceUpdate();
     if (S.lib.folders.length) { S.lib = await api.rescan(); renderLibrary(); }
     scheduleThumb(1500);
     ensureMic();

@@ -214,6 +214,21 @@ h1.t{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
 .sync-line{flex:2;min-width:0;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lyr-edit textarea{width:100%;min-height:300px;resize:vertical;border-radius:12px;background:#0f1015;border:1px solid rgba(255,255,255,.16);color:#fff;padding:12px;font:14px/1.5 ui-monospace,Consolas,monospace}
 .mcard.wide{width:min(720px,94vw)}
+/* Novidades: lista de versões rolando dentro do cartão. */
+.mcard.log{max-height:86vh}
+.log-body{min-height:0;overflow-y:auto;margin-right:-10px;padding-right:10px}
+.log-ver{display:flex;align-items:baseline;gap:10px;margin:18px 0 8px;font-size:17px}
+.log-ver:first-child{margin-top:0}
+.log-ver span{font-size:13px;font-weight:400;color:var(--muted)}
+.log-list{list-style:none;margin:0;padding:0}
+.log-list li{margin:0 0 8px;font-size:14px;line-height:1.55;color:rgba(240,242,246,.86)}
+.log-list b{color:var(--text)}
+/* Etiqueta antes de cada mudança: Novo (verde), Correção (azul), Bug (laranja). */
+.log-tag{display:inline-block;min-width:78px;margin-right:9px;padding:1px 7px;border-radius:7px;text-align:center;
+  font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;vertical-align:1px;border:1px solid}
+.log-tag.new{color:#4ade80;background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.35)}
+.log-tag.fix{color:#7cc4ff;background:rgba(124,196,255,.12);border-color:rgba(124,196,255,.35)}
+.log-tag.bug{color:#ffb070;background:rgba(255,176,112,.12);border-color:rgba(255,176,112,.35)}
 .scorebar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;width:min(980px,calc(100vw - 32px));display:flex;align-items:center;gap:14px;padding:10px 10px 10px 18px;border-radius:18px;
   background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.03)),#15161e;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 40px rgba(0,0,0,.55);animation:sbIn .3s ease-out}
 @keyframes sbIn{from{transform:translate(-50%,20px);opacity:0}}
