@@ -272,7 +272,7 @@ app.whenReady().then(async () => {
     if (!songOf(id)) return;
     const file = path.join(lyricsDir, id + '.json');
     if (!data) { await fsp.rm(file, { force: true }); return; }
-    await fsp.writeFile(file, JSON.stringify({ synced: data.synced || null, plain: data.plain || [], offset: +data.offset || 0, source: data.source || 'manual' }));
+    await fsp.writeFile(file, JSON.stringify({ synced: data.synced || null, plain: data.plain || [], offset: +data.offset || 0, source: data.source || 'manual', aligned: !!data.aligned }));
   });
   // LRCLIB (lrclib.net): base aberta de letras, muitas com o tempo de cada linha.
   ipcMain.handle('lyrics:fetch', async (_, id) => {

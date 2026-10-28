@@ -197,13 +197,22 @@
     karaoke(c);
     setLyrics(null);
     show('yt');
+    if (T.yt) { T.yt.remove(); T.yt = null; } // vídeo anterior do YouTube não fica tocando escondido
     const w = document.createElement('webview');
     w.setAttribute('partition', 'persist:youtube');
     w.setAttribute('src', c.url);
     w.addEventListener('dom-ready', () => { w.insertCSS(YT_CSS); w.setAudioMuted(false); });
     $('ytwrap').appendChild(w);
     T.yt = w;
+    // Conta ao notebook onde o vídeo está: ele pergunta a nota no fim e mostra o resultado quando acaba.
+    clearInterval(T.ytTimer);
+    T.ytTimer = setInterval(() => {
+      if (T.yt !== w) return clearInterval(T.ytTimer);
+      w.executeJavaScript(YT_STATE).then((st) => st && bridge.emit(Object.assign({ type: 'ytstate' }, st))).catch(() => {});
+    }, 1000);
   }
+  const YT_STATE = "(()=>{const v=document.querySelector('video.html5-main-video')||document.querySelector('video'),p=document.querySelector('#movie_player');" +
+    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
   function ytCmd(action) {
     if (!T.yt) return;
     const js = action === 'toggle' ? "(()=>{const v=document.querySelector('video');if(v){v.paused?v.play():v.pause();}})()"

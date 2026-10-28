@@ -20,10 +20,11 @@ O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
 - **Fila** com o nome de quem vai cantar.
 - **Nota pelo microfone**: detecta o tom da voz em tempo real e mede afinação, presença e estabilidade. Sem microfone, há o modo sorteio.
 - **Modo sem detecção**: a TV mostra a barra de tom de karaokê seguindo a melodia real do vídeo (analisada pelo próprio app) e, faltando 1 minuto, uma barrinha discreta no notebook pergunta a nota. Se ninguém escolher, sai uma nota acima de 80.
-- **Videoclipes com letra**: vídeos marcados como videoclipe (dentro de uma pasta `Clipes` ou com "videoclipe", "clipe oficial" ou "official video" no nome do arquivo) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; dá para ajustar o tempo e sincronizar apertando Espaço. Se o tipo estiver em "Automático" e a música já tiver uma letra salva, ela aparece também.
+- **Videoclipes com letra**: vídeos marcados como videoclipe (dentro de uma pasta `Clipes` ou com "videoclipe", "clipe oficial" ou "official video" no nome do arquivo) mostram a letra ao lado na TV, com a linha cantada em destaque. A letra vem do [LRCLIB](https://lrclib.net) pelo nome da música, de um arquivo `.lrc` com o mesmo nome do vídeo, ou é colada no editor; a letra baixada se encaixa sozinha quando o clipe tem uma introdução antes da música, e dá para ajustar o tempo e sincronizar apertando Espaço. Se o tipo estiver em "Automático" e a música já tiver uma letra salva, ela aparece também.
+- **Botão Letra** no Palco (ou tecla **L**): liga e desliga a letra da música que está tocando; a escolha fica guardada para aquela música.
 - **Comemoração da nota**: quem tira 70 ou mais ganha uma festa no fundo do resultado, no notebook e na TV: aurora violeta e rosa, cristais de ametista, ondas de anel e brilhos. Fica mais forte com 85+ e, com 95+ ("Lendário!"), ganha raios de luz e uma segunda explosão.
 - **Tela da TV**: com a TV ligada como tela estendida (Win + P → Estender), a TV mostra a apresentação de quem vai cantar, o vídeo, a nota ao vivo, o resultado e a fila. O notebook fica com os controles.
-- **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado), com opção de mandar o vídeo para a TV.
+- **Aba YouTube** para músicas que não estão na biblioteca (o site normal dentro do app, nada é baixado): busca com "karaokê" somado sozinho (dá para desligar), **Pôr na fila** o vídeo aberto, mandar para a TV e recomeçar lá. Quando o vídeo acaba, a nota aparece sozinha; no modo sem detecção, a nota é perguntada no último minuto.
 
 ## Limitações conhecidas
 

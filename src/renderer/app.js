@@ -91,7 +91,7 @@
     for (const v of ['library', 'youtube', 'player', 'score', 'settings']) $('v-' + v).hidden = v !== view;
     document.querySelectorAll('.nav[data-nav]').forEach((b) => b.classList.toggle('on', b.dataset.nav === view || (view === 'score' && b.dataset.nav === 'player')));
     document.querySelectorAll('.nav[data-coll]').forEach((b) => b.classList.toggle('on', view === 'library' && S.coll === b.dataset.coll));
-    if (view === 'youtube') ensureWebview();
+    if (view === 'youtube') { ensureWebview(); $('ytKaraoke').checked = S.lib.settings.ytKaraoke !== false; }
     if (view === 'settings') renderSettings();
     if (view === 'library') renderLibrary();
     $('app').querySelector('.main').scrollTop = 0;
@@ -239,6 +239,7 @@
     if (!S.queue.length) { toast('A fila está vazia'); return; }
     const q = S.queue.shift();
     renderQueue();
+    if (q.song.yt) return playYoutube(q.song, q.singer);
     startSong(q.song, q.singer);
   }
 
@@ -385,16 +386,64 @@
     if (!lyr && S.lib.settings.autoLyrics !== false) { lyr = await api.fetchLyrics(song.id); if (lyr) api.saveLyrics(song.id, lyr); }
     return lyr;
   }
+  // Caixa da letra no Palco + estado do botão "Letra".
+  function showLyrBox(on) {
+    $('lyrBox').hidden = !on;
+    const b = $('lyrBtn');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on);
+  }
+  // Botão "Letra": liga/desliga e guarda a escolha na música (vira videoclipe ou karaokê).
+  function toggleLyrics() {
+    if (!S.current || S.current.youtube) return;
+    const song = S.current.song, on = $('lyrBox').hidden;
+    song.kind = on ? 'clip' : 'karaoke';
+    api.updateSong(song.id, { kind: song.kind });
+    if (on) applyLyrics(song);
+    else { showLyrBox(false); setLyrics(null, true); }
+    toast(on ? 'Letra ligada para esta música' : 'Letra desligada para esta música');
+  }
   function applyLyrics(song) {
     setLyrics(null, true);
-    $('lyrBox').hidden = kindOf(song) !== 'clip';
+    showLyrBox(kindOf(song) === 'clip');
     if ($('lyrBox').hidden) {
       // Tipo automático, mas com letra já salva (baixada, colada ou .lrc): mostra mesmo assim.
-      if (!song.kind) api.getLyrics(song.id).then((lyr) => { if (lyr && S.current && S.current.song === song) { $('lyrBox').hidden = false; setLyrics(lyr); } });
+      if (!song.kind) api.getLyrics(song.id).then((lyr) => { if (lyr && S.current && S.current.song === song) { showLyrBox(true); setLyrics(lyr); autoAlign(song); } });
       return;
     }
     $('lyrNow').textContent = 'Procurando a letra…';
-    loadLyrics(song).then((lyr) => { if (S.current && S.current.song === song) setLyrics(lyr); });
+    loadLyrics(song).then((lyr) => { if (S.current && S.current.song === song) { setLyrics(lyr); autoAlign(song); } });
+  }
+  // A letra do LRCLIB segue a versão de álbum; clipes costumam ter uma introdução antes da música.
+  // Pela análise de melodia, acha onde a música começa no vídeo e encaixa a letra ali (uma vez por música).
+  function autoAlign(song) {
+    const lyr = S.lyrics;
+    if (!lyr || !lyr.synced || lyr.aligned || lyr.offset || lyr.source !== 'LRCLIB') return;
+    melody.get(song, true).then((res) => {
+      if (S.lyrics !== lyr || !res) return;
+      const off = lyricsShift(lyr, res);
+      lyr.aligned = true;
+      if (!off) { api.saveLyrics(song.id, lyr); return; }
+      setOffset(off); // já salva e avisa a TV
+      toast(`Letra encaixada no vídeo (${fmtOff(off)}). Se precisar, ajuste em “Tempo da letra”.`, 5000);
+    });
+  }
+  function lyricsShift(lyr, res) {
+    const notes = res.notes || [];
+    if (notes.length < 8) return 0;
+    // Começo da música: primeiro trecho de 4 s com nota em pelo menos metade do tempo.
+    let start = null;
+    for (let i = 0; i < notes.length && start == null; i++) {
+      let cov = 0;
+      for (let j = i; j < notes.length && notes[j].s < notes[i].s + 4; j++) cov += Math.min(notes[j].e, notes[i].s + 4) - notes[j].s;
+      if (cov >= 2) start = notes[i].s;
+    }
+    if (start == null) return 0;
+    // Se no álbum a voz entra logo no começo, a primeira linha marca o início da música.
+    const first = (lyr.synced.find((l) => l.text) || { t: 0 }).t;
+    const off = start - (first < 3 ? first : 0);
+    // Só encaixa introduções (clipes); um vídeo igual ao álbum fica como está.
+    return off < 1.5 ? 0 : Math.round(off * 100) / 100;
   }
   function setLyrics(lyr, quiet) {
     const has = lyr && ((lyr.synced && lyr.synced.length) || (lyr.plain && lyr.plain.length));
@@ -475,7 +524,7 @@
       const data = text.trim() ? Object.assign(p, { offset: lyr && p.synced ? lyr.offset || 0 : 0, source: text === orig && lyr ? lyr.source : (form.dataset.source || 'editada') }) : null;
       await api.saveLyrics(song.id, data);
       m.hidden = true;
-      if (S.current && S.current.song === song) { if (kindOf(song) === 'clip' || (data && !song.kind)) $('lyrBox').hidden = false; setLyrics(data); }
+      if (S.current && S.current.song === song) { if (kindOf(song) === 'clip' || (data && !song.kind)) showLyrBox(true); setLyrics(data); }
       toast(data ? 'Letra salva' : 'Letra apagada');
     });
     form._song = song;
@@ -622,6 +671,7 @@
       case 'play': S.tvPaused = false; if (video.getAttribute('src') && !document.hidden) video.play().catch(() => {}); return onPlay();
       case 'pause': S.tvPaused = true; video.pause(); return onPause();
       case 'ended': return finish();
+      case 'ytstate': return S.ytOnTv && ytState(e);
       case 'error': return onError();
       case 'state':
         S.tvT = e.t; S.tvD = e.d; S.tvPaused = e.paused; S.tvTAt = performance.now();
@@ -735,20 +785,61 @@
     webview.setAttribute('partition', 'persist:youtube');
     webview.setAttribute('allowpopups', '');
     webview.addEventListener('page-title-updated', (e) => { S.ytTitle = e.title.replace(/\s*-\s*YouTube\s*$/, ''); });
+    webview.addEventListener('dom-ready', () => { webview.ready = true; });
     $('webwrap').appendChild(webview);
   }
-  function ytSearch(q) {
+  // Abre um endereço no YouTube daqui (antes da página carregar, só troca o src).
+  function ytLoad(url) {
     ensureWebview();
-    const query = /karaok/i.test(q) ? q : q + ' karaokê';
-    webview.loadURL('https://www.youtube.com/results?search_query=' + encodeURIComponent(query));
+    if (webview.ready) return webview.loadURL(url).catch(() => {});
+    webview.setAttribute('src', url);
+    return new Promise((r) => webview.addEventListener('dom-ready', r, { once: true }));
+  }
+  function ytSearch(q) {
+    const add = S.lib.settings.ytKaraoke !== false && !/karaok/i.test(q);
+    ytLoad('https://www.youtube.com/results?search_query=' + encodeURIComponent(add ? q + ' karaokê' : q));
+  }
+  // "Lady Gaga - Bad Romance (Karaoke Version) | Sing King" → { artist: "Lady Gaga", title: "Bad Romance" }
+  function ytSong(raw) {
+    const t = String(raw || '')
+      .replace(/[\[(【][^\])】]*(karaok|playback|instrumental|lyrics?|letra|vers[aã]o|version|official|oficial|v[ií]deo|audio|áudio|hd|4k)[^\])】]*[\])】]/gi, '')
+      .replace(/\b(karaok[eê]|playback|com letra|with lyrics)\b/gi, '')
+      .replace(/\s*[|｜].*$/, '')
+      .replace(/[\s\-–—]+$/, '').replace(/\s{2,}/g, ' ').trim();
+    const p = t.split(/\s+[-–—]\s+/);
+    return p.length >= 2 ? { artist: p[0], title: p.slice(1).join(' - ') } : { artist: 'YouTube', title: t || 'Música do YouTube' };
+  }
+  const ytIdOf = (url) => (String(url).match(/[?&]v=([\w-]{6,})/) || [])[1];
+  // Põe o vídeo aberto na fila; quando chegar a vez, ele toca sozinho (na TV, se estiver ligada).
+  function ytEnqueue() {
+    ensureWebview();
+    const url = webview.ready ? webview.getURL() : '';
+    const id = ytIdOf(url);
+    if (!id) return toast('Abra um vídeo do YouTube primeiro');
+    const song = Object.assign({ id: 'yt:' + id, yt: 'https://www.youtube.com/watch?v=' + id }, ytSong(S.ytTitle));
+    S.queue.push({ song, singer: singerName() });
+    renderQueue();
+    toast(`${song.title} entrou na fila (${singerName()})`);
+  }
+  async function playYoutube(song, singer) {
+    if (S.ytScoring) ytScoreStop(false);
+    go('youtube');
+    await ytLoad(song.yt);
+    await ytStart(singer);
+    Object.assign(S.current.song, { title: song.title, artist: song.artist });
+    if (S.tv) ytToTv();
   }
   async function ytScoreToggle() {
     if (S.ytScoring) return ytScoreStop(true);
+    return ytStart(singerName());
+  }
+  async function ytStart(singer) {
     const manual = S.lib.settings.scoreMode === 'manual';
     if (!manual && !(await ensureMic())) toast('Microfone não encontrado: a nota será sorteada.');
     if (!video.paused) video.pause();
     S.ytScoring = true;
-    S.current = { song: { title: S.ytTitle || 'Música do YouTube', artist: 'YouTube' }, singer: singerName(), youtube: true };
+    S.current = { song: ytSong(S.ytTitle), singer, youtube: true };
+    S.ytEnded = false;
     S.mode = manual ? 'manual' : S.micOk ? 'mic' : 'fake';
     sim.reset();
     scorer.begin();
@@ -760,9 +851,21 @@
     S.ytScoring = false;
     $('ytLive').hidden = true;
     $('ytScoreBtn').textContent = 'Pontuar esta música';
-    if (show) { S.current.song.title = S.ytTitle || S.current.song.title; finish(); }
+    if (show) { if (S.current.song.artist === 'YouTube') Object.assign(S.current.song, ytSong(S.ytTitle)); finish(); }
     else scorer.pause();
   }
+  // Estado do vídeo (daqui ou da TV), ~1x por segundo: pergunta a nota no fim e mostra o resultado quando acaba.
+  const YT_STATE = "(()=>{const v=document.querySelector('video.html5-main-video')||document.querySelector('video'),p=document.querySelector('#movie_player');" +
+    "return v?{t:v.currentTime,d:v.duration||0,ended:v.ended,ad:!!(p&&p.classList.contains('ad-showing'))}:null})()";
+  function ytState(st) {
+    if (!S.ytScoring || !st || st.ad || S.ytEnded) return;
+    if (S.mode === 'manual' && !sim.asked && st.d > 20 && st.d - st.t < Math.min(60, st.d / 2)) askScore();
+    if (st.d > 5 && (st.ended || st.t >= st.d - 0.4)) { S.ytEnded = true; ytScoreStop(true); }
+  }
+  setInterval(() => {
+    if (!S.ytScoring || S.ytOnTv || !webview || !webview.ready) return;
+    webview.executeJavaScript(YT_STATE).then(ytState).catch(() => {});
+  }, 1000);
   async function ytToTv() {
     ensureWebview();
     const url = webview.getURL();
@@ -775,6 +878,7 @@
     toast('Vídeo mandado para a TV');
   }
   $('ytForm').addEventListener('submit', (e) => { e.preventDefault(); const q = $('ytQuery').value.trim(); if (q) ytSearch(q); });
+  $('ytKaraoke').addEventListener('change', (e) => saveSettings({ ytKaraoke: e.target.checked }));
 
   // ---------- configurações ----------
   async function renderSettings() {
@@ -972,6 +1076,9 @@
       case 'tvIdle': return S.tv && api.tvCmd({ type: 'idle' });
       case 'ytToTv': return ytToTv();
       case 'ytTvToggle': return api.tvCmd({ type: 'ytcmd', action: 'toggle' });
+      case 'ytTvRestart': return api.tvCmd({ type: 'ytcmd', action: 'restart' });
+      case 'ytEnqueue': return ytEnqueue();
+      case 'lyrToggle': return toggleLyrics();
       case 'fullscreen': return toggleFullscreen();
       case 'finish': return finish();
       case 'skip': $('verr').hidden = true; return S.queue.length ? nextInQueue() : go('library');
@@ -1022,6 +1129,7 @@
     if (e.key === ' ' && S.sync) { if (!e.target.closest('button')) { e.preventDefault(); act('syncMark', e.target); } return; }
     if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); P.toggle(); }
     else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+    else if (e.key === 'l' || e.key === 'L') toggleLyrics();
     else if (e.key === 'ArrowRight') P.seek(P.time + 5);
     else if (e.key === 'ArrowLeft') P.seek(P.time - 5);
   });
