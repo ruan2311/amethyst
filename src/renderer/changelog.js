@@ -3,6 +3,10 @@
 (function () {
   const TAGS = Object.freeze({ new: 'Novo', fix: 'Correção', bug: 'Bug' });
   const LOG = [
+    { version: '1.7.0', date: 'outubro de 2026', items: [
+      ['new', '*Atualização automática:* o Amethyst procura versões novas no GitHub ao abrir e a cada 6 horas, baixa em segundo plano e confere se o arquivo é o original. Quando estiver pronta, aparece *Atualização pronta* no menu: um clique e ele fecha, atualiza e abre de novo sozinho.'],
+      ['new', 'Em *Configurações → Atualizações*: procurar agora, acompanhar o download e ligar ou desligar o download automático. Instalar é sempre com você.']
+    ] },
     { version: '1.6.0', date: 'outubro de 2026', items: [
       ['new', '*Novidades:* esta tela, em Configurações, com o que mudou em cada versão. O Amethyst também avisa quando é atualizado.']
     ] },

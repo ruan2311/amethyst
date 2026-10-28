@@ -13,6 +13,8 @@ Encontrou algum problema? Abra uma *issue* e anexe o arquivo `%APPDATA%\Amethyst
 
 O passo a passo completo está no `LEIA-ME.txt` dentro do zip.
 
+Depois de instalado, o Amethyst **se atualiza sozinho**: ao abrir e a cada 6 horas ele procura uma versão nova aqui no GitHub, baixa em segundo plano e confere o arquivo (SHA-256). Quando estiver pronta, aparece **Atualização pronta** no menu; um clique e ele fecha, troca os arquivos e abre de novo. Biblioteca, notas e letras ficam em `%APPDATA%\Amethyst` e não são tocadas. (Quem está numa versão anterior à 1.7.0 precisa baixar o zip uma última vez.)
+
 ## O que ele faz
 
 - **Biblioteca** a partir dos seus vídeos (mp4, mkv, webm…), separada por **artistas**, **gêneros** e coleções (favoritas, mais cantadas, recentes).
@@ -45,6 +47,7 @@ node build/package-win.js dist/Amethyst      # monta a versão Windows (x64), fu
 
 - `src/main.js` — janelas, servidor local de vídeos (`media://`), tela da TV
 - `src/library.js` — varredura das pastas e banco da biblioteca (`library.json`)
+- `src/updater.js` — atualização automática pelos Releases do GitHub (confere o SHA-256 e troca os arquivos com um script do Windows)
 - `src/renderer/` — interface do notebook (`index.html`, `app.js`), da TV (`tv.html`, `tv.js`), pontuação (`scoring.js`), comemoração da nota (`celebrate.js`), barra de tom (`bars.js`), análise da melodia (`melody-worker.js`) letras (`lyrics.js`) e Novidades (`changelog.js`)
 
 Para testar sem clicar: `Amethyst.exe --selftest=C:\pasta` (com vídeos em `C:\pasta\videos`) passa por todas as telas, salva prints e grava o log.

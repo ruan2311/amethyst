@@ -1,4 +1,4 @@
-﻿AMETHYST 1.1.0 - karaokê
+﻿AMETHYST 1.7.0 - karaokê
 =====================================
 
 COMO ABRIR
@@ -48,6 +48,12 @@ VIDEOCLIPES COM LETRA
   - Letra adiantada/atrasada? No Palco use os botões de tempo ou
     "1ª linha começa agora". Letra sem tempo? Use "Sincronizar" e aperte
     Espaço quando cada linha começar.
+
+ATUALIZAÇÕES
+  O Amethyst procura versões novas no GitHub sozinho (ao abrir e a cada
+  6 horas) e baixa em segundo plano. Quando aparecer "Atualização pronta"
+  no menu, clique: ele fecha, atualiza e abre de novo em alguns segundos.
+  Configurações > Atualizações: procurar agora ou desligar o automático.
 
 ONDE FICAM OS DADOS
   %APPDATA%\Amethyst  (biblioteca, miniaturas, notas e o arquivo amethyst.log)

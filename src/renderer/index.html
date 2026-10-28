@@ -20,6 +20,7 @@
   <button class="nav" data-coll="recent"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recentes</button>
   <div class="sec">Sistema</div>
   <button class="nav" data-nav="settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Configurações</button>
+  <button class="updbtn" id="updBtn" data-action="updOpen" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg><span><b id="updBtnText">Atualização</b><small id="updBtnSub"></small></span></button>
   <button class="tvbtn" id="tvBtn" data-action="tvToggle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span><b id="tvBtnText">Tela da TV</b><small id="tvBtnSub"></small></span></button>
   <button class="mic" id="micChip" data-nav="settings"><i></i><span>Microfone</span></button>
 </nav>
@@ -281,6 +282,16 @@
         <h2>Histórico</h2>
         <p class="note" id="histInfo"></p>
         <div class="row-btns"><button class="btn gho" data-action="clearHistory">Apagar histórico de notas</button></div>
+      </div>
+      <div class="scard" id="updCard">
+        <h2>Atualizações</h2>
+        <p class="note" id="updText">Procurando…</p>
+        <div class="trk upd-trk" id="updTrk" hidden><i id="updBar"></i></div>
+        <div class="row-btns">
+          <button class="btn pri" data-action="updMain" id="updMainBtn" hidden></button>
+          <button class="btn gho" data-action="updCheck" id="updCheckBtn">Procurar agora</button>
+        </div>
+        <label class="check"><input type="checkbox" id="autoUpdChk"><span>Baixar atualizações sozinho<br><small>O Amethyst procura no GitHub a cada 6 horas e baixa em segundo plano. Instalar é sempre com você: ele só reinicia quando você mandar.</small></span></label>
       </div>
       <div class="scard">
         <h2>Novidades</h2>

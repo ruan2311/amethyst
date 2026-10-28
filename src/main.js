@@ -5,6 +5,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const { Readable } = require('stream');
 const library = require('./library');
+const updater = require('./updater');
 require('./renderer/lyrics'); // AmethystLyrics.parse para arquivos .lrc
 
 protocol.registerSchemesAsPrivileged([
@@ -34,6 +35,13 @@ process.on('unhandledRejection', (e) => log('[main]', e));
 
 let win = null;
 let tv = null;
+let upd = null;
+
+// Teste do atualizador numa cópia separada: --update-test=<pasta> procura, baixa e instala sozinho;
+// a cópia reaberta com --update-done=<pasta> só anota a versão e fecha.
+const argDir = (flag) => { const a = process.argv.find((x) => x.startsWith(flag + '=')); return a ? a.slice(flag.length + 1) : null; };
+const updateTestDir = argDir('--update-test'), updateDoneDir = argDir('--update-done');
+if (updateTestDir || updateDoneDir) app.setPath('userData', path.join(updateTestDir || updateDoneDir, 'userdata'));
 let store = null;
 
 const MIME = {
@@ -169,6 +177,10 @@ function openTv() {
 function send(channel, payload) { if (win && !win.isDestroyed()) win.webContents.send(channel, payload); }
 
 app.whenReady().then(async () => {
+  if (updateDoneDir) {
+    fs.writeFileSync(path.join(updateDoneDir, 'versao-depois.txt'), app.getVersion());
+    return app.quit();
+  }
   logFile = path.join(app.getPath('userData'), 'amethyst.log');
   log('Amethyst', app.getVersion(), 'iniciado');
   store = await library.open(app.getPath('userData'));
@@ -298,6 +310,18 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('app:version', () => app.getVersion());
 
+  // ---------- atualizações ----------
+  upd = updater.create({
+    userData: app.getPath('userData'), log,
+    onChange: (st) => send('update:status', st),
+    getAuto: () => store.data.settings.autoUpdate !== false
+  });
+  ipcMain.handle('update:status', () => upd.status());
+  ipcMain.handle('update:check', () => upd.check(true));
+  ipcMain.handle('update:download', () => upd.download());
+  ipcMain.handle('update:install', async () => { await store.save(); return upd.install(); });
+  ipcMain.handle('update:auto', async (_, on) => { store.data.settings.autoUpdate = !!on; await store.save(); if (on) upd.check(false); return upd.status(); });
+
   ipcMain.handle('tv:open', () => openTv());
   ipcMain.handle('tv:close', () => { if (tv) tv.close(); });
   ipcMain.handle('tv:status', () => tvStatus());
@@ -315,7 +339,17 @@ app.whenReady().then(async () => {
   screen.on('display-added', tvStatus);
   screen.on('display-removed', tvStatus);
 
+  if (updateTestDir) {
+    // Sem janela: procura, baixa e instala, e a cópia reaberta anota a versão nova.
+    const st = await upd.check(true);
+    fs.writeFileSync(path.join(updateTestDir, 'versao-antes.txt'), app.getVersion() + ' -> ' + (st.latest || 'nada') + ' (' + st.state + ')');
+    if (st.state === 'available') await upd.download();
+    if (upd.status().state === 'ready') return upd.install(['--update-done=' + updateTestDir]);
+    fs.writeFileSync(path.join(updateTestDir, 'erro.txt'), JSON.stringify(upd.status()));
+    return app.quit();
+  }
   createWindow();
+  upd.start();
   if (selftestDir) runSelftest();
 });
 

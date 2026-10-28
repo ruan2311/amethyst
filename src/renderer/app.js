@@ -949,6 +949,55 @@
   $('autoLyricsChk').addEventListener('change', (e) => saveSettings({ autoLyrics: e.target.checked }));
   $('singer').addEventListener('change', (e) => saveSettings({ singer: e.target.value.trim() }));
 
+  // ---------- atualizações ----------
+  let U = null;
+  const when = (t) => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  function renderUpdate(st) {
+    if (!st) return;
+    U = st;
+    const dev = !st.canInstall && (st.state === 'available' || st.state === 'ready') ? ' (Fora do Amethyst.exe, a instalação automática fica desligada.)' : '';
+    $('updText').textContent = ({
+      none: `Você está na versão mais nova (${st.current}).` + (st.checked ? ` Última verificação: ${when(st.checked)}.` : ''),
+      checking: 'Procurando atualização no GitHub…',
+      available: `A versão ${st.latest} está disponível (você tem a ${st.current}).`,
+      downloading: `Baixando a versão ${st.latest}… ${st.progress}%`,
+      ready: `A versão ${st.latest} foi baixada e conferida. Está pronta para instalar.`,
+      installing: 'Instalando: o Amethyst vai fechar e abrir de novo sozinho.',
+      error: st.error || 'Algo deu errado. Tente de novo.'
+    })[st.state] + dev;
+    $('updTrk').hidden = st.state !== 'downloading';
+    $('updBar').style.width = st.progress + '%';
+    const main = $('updMainBtn');
+    main.hidden = !(st.state === 'ready' || st.state === 'available' || (st.state === 'error' && st.latest));
+    main.textContent = st.state === 'ready' ? 'Atualizar agora' : `Baixar a ${st.latest}`;
+    main.disabled = st.state === 'ready' && !st.canInstall;
+    $('updCheckBtn').disabled = ['checking', 'downloading', 'installing'].includes(st.state);
+    $('autoUpdChk').checked = st.auto;
+    // Aviso discreto no menu.
+    const b = $('updBtn'), show = ['available', 'downloading', 'ready'].includes(st.state);
+    b.hidden = !show;
+    if (show) {
+      $('updBtnText').textContent = st.state === 'ready' ? 'Atualização pronta' : st.state === 'downloading' ? 'Baixando atualização' : 'Nova versão';
+      $('updBtnSub').textContent = st.state === 'downloading' ? st.progress + '%' : 'versão ' + st.latest;
+    }
+  }
+  api.onUpdate(renderUpdate);
+  api.updateStatus().then(renderUpdate);
+  $('autoUpdChk').addEventListener('change', (e) => api.updateAuto(e.target.checked).then(renderUpdate));
+  function confirmInstall() {
+    if (!U || U.state !== 'ready') return;
+    const playing = S.current && !P.paused;
+    const notes = (U.notes || '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/`/g, '').trim();
+    const m = $('modal');
+    m.innerHTML = `<div class="mcard wide"><h2>Atualizar para a versão ${esc(U.latest)}?</h2>
+      <p class="note">O Amethyst fecha e abre de novo sozinho em alguns segundos. A biblioteca, as notas, as letras e as configurações continuam.</p>
+      ${playing ? '<p class="note"><b>Tem uma música tocando:</b> ela vai parar.</p>' : ''}
+      ${notes ? `<div class="upd-notes">${esc(notes)}</div>` : ''}
+      <div class="row-btns"><button class="btn pri" type="button" data-action="updInstall">Atualizar agora</button>
+      <button class="btn gho" type="button" data-action="closeModal">Depois</button></div></div>`;
+    m.hidden = false;
+  }
+
   // ---------- novidades ----------
   const rich = (t) => esc(t).split('*').map((p, i) => (i % 2 ? `<b>${p}</b>` : p)).join('');
   function openChangelog() {
@@ -1077,6 +1126,13 @@
       case 'showFile': return api.showFile(el.dataset.id);
       case 'closeModal': $('modal').hidden = true; return;
       case 'changelog': return openChangelog();
+      case 'updOpen':
+        if (U && U.state === 'ready' && U.canInstall) return confirmInstall();
+        go('settings'); setTimeout(() => $('updCard').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        return;
+      case 'updMain': return U && U.state === 'ready' ? confirmInstall() : api.updateDownload().then(renderUpdate);
+      case 'updCheck': return api.updateCheck().then(renderUpdate);
+      case 'updInstall': $('modal').hidden = true; toast('Atualizando… o Amethyst já volta', 8000); return api.updateInstall();
       case 'askScore': return askScore();
       case 'sbHide': return hideScoreBar();
       case 'editLyrics': return openLyrics(song || (S.current && !S.current.youtube ? S.current.song : null));
