@@ -74,6 +74,8 @@ body.withlyrics #s-play video{width:64vw}
 .k-score b{font-size:3.4vw;font-weight:800;letter-spacing:-.02em}
 .k-score small{font-size:1.1vw;color:rgba(232,234,240,.7)}
 body.kmode .hud-who,body.kmode .hud-score{display:none}
+/* Videoclipe: a faixa de tom para onde começa a letra */
+body.withlyrics .kstrip{right:36vw}
 .hud-next{position:absolute;bottom:2.4vw;right:2.4vw;padding:.9vw 1.6vw;border-radius:1.2vw;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.18);font-size:1.6vw;animation:pop .5s}
 
 /* Nota */

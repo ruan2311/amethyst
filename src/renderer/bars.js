@@ -4,6 +4,16 @@
 (function () {
   const LEVELS = 12;
   const rand = (a, b) => a + Math.random() * (b - a);
+  // Avaliação de cada nota, como no Just Dance. err: quanto a voz desvia da barra (em faixas).
+  const GRADES = [
+    { text: 'X', color: '#ff4d6d', err: 2.6, lit: 0 },
+    { text: 'OK', color: 'rgba(255,255,255,.85)', err: 1.0, lit: 0.25 },
+    { text: 'BOM!', color: '#9b7bff', err: 0.55, lit: 0.55 },
+    { text: 'ÓTIMO!', color: '#c9b8ff', err: 0.28, lit: 0.85 },
+    { text: 'PERFEITO!', color: '#ff8fab', err: 0.06, lit: 1 }
+  ];
+  // Sorteio que dá o mesmo resultado para a mesma nota no notebook e na TV.
+  const seeded = (x) => { const v = Math.sin(x * 12.9898 + 78.233) * 43758.5453; return v - Math.floor(v); };
 
   class KaraokeBars {
     constructor(canvas, opts = {}) {
@@ -33,6 +43,16 @@
       this.t = clock(); this.trail = []; this.pops = []; this.voice = null;
     }
 
+    // Escolhe a avaliação da nota: a média segue a "habilidade" e varia em fases boas e ruins da música.
+    grade(n) {
+      const s = Math.max(0, Math.min(1, (this.skill - 0.3) / 0.7));
+      const mu = 0.9 + s * 2.6 + 0.7 * Math.sin(n.start * 0.21) + 0.35 * Math.sin(n.start * 0.83 + 1.7);
+      const w = GRADES.map((_, k) => Math.exp(-((k - mu) ** 2) / (2 * 1.25 ** 2)) + (k < 2 ? 0.05 : 0));
+      let r = seeded(n.start * 7.31 + n.level) * w.reduce((a, b) => a + b, 0), k = 0;
+      while (k < GRADES.length - 1 && r > w[k]) r -= w[k++];
+      return k;
+    }
+
     // Frases de 4 a 7 notas, com pausas entre as frases, como uma melodia.
     generate(until) {
       while (this.genUntil < until) {
@@ -53,7 +73,7 @@
       if (this.track) {
         const now = this.clock();
         if (now < this.t - 0.5) { // voltou a música: as notas à frente voltam a ficar apagadas
-          for (const x of this.track) if (x.start >= now) { x.hit = 0; x.seen = 0; x.done = false; }
+          for (const x of this.track) if (x.start >= now) { x.hit = 0; x.seen = 0; x.done = false; x.grade = undefined; }
           this.trail = [];
         }
         this.t = now;
@@ -67,12 +87,19 @@
       this.wobble += dt * 7;
       const n = this.notes.find((x) => x.start <= this.t && x.end > this.t);
       if (n) {
-        // Erro da voz diminui com a "habilidade" (que segue a nota ao vivo).
-        const err = (1 - this.skill) * 2.2 * Math.sin(this.wobble * 0.9) + rand(-0.25, 0.25) * (1.2 - this.skill);
-        const target = n.level + err;
-        this.voice = this.voice == null ? target : this.voice + (target - this.voice) * Math.min(1, dt * 14);
+        if (n.grade === undefined) n.grade = this.grade(n);
+        const G = GRADES[n.grade], k = (this.t - n.start) / Math.max(0.05, n.end - n.start);
+        if (n.grade === 0 && k > 0.55) this.voice = null; // errou: perde a nota no meio
+        else {
+          // A voz desvia da barra conforme a avaliação: no PERFEITO fica em cima, no X sai do tom.
+          const side = n.level > LEVELS / 2 ? -1 : 1;
+          const err = n.grade === 0 ? side * G.err + 0.4 * Math.sin(this.wobble * 1.3)
+            : G.err * Math.sin(this.wobble * 0.9 + n.start) + rand(-0.12, 0.12) * G.err;
+          const target = n.level + err;
+          this.voice = this.voice == null ? target : this.voice + (target - this.voice) * Math.min(1, dt * 14);
+        }
         n.seen += dt;
-        if (Math.abs(this.voice - n.level) < 0.6) n.hit += dt;
+        if (this.voice != null && Math.abs(this.voice - n.level) < 0.6) n.hit += dt;
       } else if (this.voice != null) {
         this.voice = null;
       }
@@ -82,9 +109,9 @@
         if (x.end < this.t - 1 || x.start > this.t) continue;
         if (!x.done && x.end <= this.t) {
           x.done = true;
-          const r = x.seen ? x.hit / x.seen : 0;
-          if (r > 0.8) this.pops.push({ text: 'PERFEITO!', t: this.t, y: x.level });
-          else if (r > 0.5) this.pops.push({ text: 'BOM!', t: this.t, y: x.level });
+          // Uma avaliação por vez; notas muito juntas (menos de 0,4 s) não trocam a que está na tela.
+          const last = this.pops[0];
+          if (x.grade !== undefined && (!last || this.t - last.t > 0.4)) this.pops = [{ g: x.grade, t: this.t }];
         }
       }
       this.pops = this.pops.filter((p) => this.t - p.t < 0.9);
@@ -124,10 +151,14 @@
         g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 1.2; g.stroke();
         // parte que já passou: acende se a voz acertou
         if (x0 < cx) {
-          const ratio = n.seen ? n.hit / n.seen : 0;
+          // Acende conforme a avaliação: PERFEITO brilha forte, OK quase apagado, X fica vermelho escuro.
+          const G = n.grade === undefined ? null : GRADES[n.grade];
           g.save(); g.beginPath(); g.rect(0, 0, cx, h); g.clip();
           pill(x0, y, x1 - x0);
-          if (ratio > 0.5) { g.fillStyle = lit; g.shadowColor = '#ff2d55'; g.shadowBlur = 12; } else g.fillStyle = 'rgba(255,255,255,.07)';
+          if (G && G.lit) {
+            g.globalAlpha = 0.35 + 0.65 * G.lit; g.fillStyle = lit;
+            if (G.lit >= 0.85) { g.shadowColor = '#ff2d55'; g.shadowBlur = 12 * G.lit; }
+          } else g.fillStyle = G ? 'rgba(255,77,109,.18)' : 'rgba(255,255,255,.07)';
           g.fill();
           g.restore();
         }
@@ -155,16 +186,28 @@
         g.shadowBlur = 0;
       }
 
-      // "PERFEITO!" / "BOM!"
+      // X / OK / BOM! / ÓTIMO! / PERFEITO!: aparece com um pulo, sobe e some.
+      g.textAlign = 'center'; g.textBaseline = 'middle';
       for (const p of this.pops) {
-        const k = (this.t - p.t) / 0.9;
-        g.globalAlpha = 1 - k;
-        g.font = `800 ${Math.max(11, h * 0.13)}px Outfit, system-ui, sans-serif`;
-        g.fillStyle = p.text === 'BOM!' ? '#b9a6ff' : '#ff8fab';
-        g.textAlign = 'center';
-        g.fillText(p.text, cx + bh * 3, yOf(p.y) - bh - k * h * 0.15);
-        g.globalAlpha = 1;
+        const G = GRADES[p.g], k = (this.t - p.t) / 0.9;
+        const pop = k < 0.15 ? 0.6 + (k / 0.15) * 0.55 : k < 0.3 ? 1.15 - ((k - 0.15) / 0.15) * 0.15 : 1;
+        // Tamanho pelo lado menor: faixa larga da TV ou painel alto e estreito do notebook.
+        const base = Math.min(h, w * 0.4);
+        const size = Math.max(13, base * (p.g === 4 ? 0.3 : p.g === 0 ? 0.36 : 0.25)) * pop;
+        g.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+        const tw = g.measureText(G.text).width;
+        // Logo à direita da agulha, no meio da faixa, sem passar da borda (o X treme).
+        const x = Math.min(cx + bh * 1.5 + tw / 2, w - tw / 2 - 4) + (p.g === 0 && k < 0.3 ? Math.sin(k * 90) * bh * 0.4 : 0);
+        const y = h * 0.5 - k * h * 0.12;
+        g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+        g.lineJoin = 'round'; g.lineWidth = size * 0.16; g.strokeStyle = 'rgba(4,4,8,.85)';
+        g.strokeText(G.text, x, y);
+        if (p.g >= 3) { g.shadowColor = G.color; g.shadowBlur = size * 0.45; }
+        g.fillStyle = G.color;
+        g.fillText(G.text, x, y);
+        g.shadowBlur = 0; g.globalAlpha = 1;
       }
+      g.textBaseline = 'alphabetic';
     }
   }
 
